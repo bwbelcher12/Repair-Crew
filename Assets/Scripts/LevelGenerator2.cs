@@ -173,13 +173,13 @@ public class LevelGenerator2 : MonoBehaviour
             //Identify overlapping walls and separate them from non-overlapping walls
             foreach(Transform wall in walls)
             {
-                if(allWallPositions.Contains(wall.transform.position))
+                if(allWallPositions.Contains(FixVector3Floats(wall.transform.position)))
                 {
                     overlappingWalls.Add(wall.gameObject);
                 }
                 else
                 {
-                    allWallPositions.Add(wall.transform.position);
+                    allWallPositions.Add(FixVector3Floats(wall.transform.position));
                     wallList.Add(wall);
                 }
             }
