@@ -1,5 +1,6 @@
 using System.Collections;
 using System.Collections.Generic;
+using System.Linq;
 using UnityEngine;
 
 public class LevelGenerator2 : MonoBehaviour
@@ -8,10 +9,45 @@ public class LevelGenerator2 : MonoBehaviour
 
     public List<GameObject> possibleRooms = new List<GameObject>();
     public GameObject doorPrefab;
-    public GameObject hallPrefab;
+    public GameObject straightHall;
+    public GameObject lHall;
+    public GameObject tHall;
+    public GameObject crossHall;
+    public GameObject capHall;
     List<Transform> connectionPoints = new List<Transform>();
+    List<Vector3> connectionPointPositions = new List<Vector3>();
     List<Transform> rooms = new List<Transform>();
+    List<Vector3> roomPositions = new List<Vector3>();
     List<Vector2> grid;
+    List<Transform> hallway;
+    public List<Vector3> hallwayPositions = new List<Vector3>();
+    List<Vector3> tempNeighborSpaces = new List<Vector3>();
+
+
+
+
+    //Arrays for determining wall placement
+    List<int> wallPositions = new List<int> { 0, 0, 0, 0 };
+
+    List<int> crossHallPositions = new List<int> { 1, 1, 1, 1 };
+
+    List<int> tHallNorth = new List<int> { 1, 0, 1, 1 };
+    List<int> tHallSouth = new List<int> { 1, 1, 1, 0 };
+    List<int> tHallEast = new List<int> { 1, 1, 0, 1 };
+    List<int> tHallWest = new List<int> { 0, 1, 1, 1 };
+
+    List<int> lHallNorthEast = new List<int> { 1, 0, 0, 1 };
+    List<int> lHallSouthWest = new List<int> { 0, 1, 1, 0 };
+    List<int> lHallNorthWest = new List<int> { 1, 1, 0, 0 };
+    List<int> lHallSouthEast = new List<int> { 0, 0, 1, 1 };
+
+    List<int> straightHallNorthSouth = new List<int> { 1, 0, 1, 0 };
+    List<int> straightHallEastWest = new List<int> { 0, 1, 0, 1 };
+
+    List<int> capHallNorth = new List<int> { 1, 0, 0, 0 };
+    List<int> capHallSouth = new List<int> { 0, 0, 1, 0 };
+    List<int> capHallEast = new List<int> { 0, 0, 0, 1 };
+    List<int> capHallWest = new List<int> { 0, 1, 0, 0 };
 
     public int roomCount;
     public int boundsX, boundsY;
@@ -25,14 +61,23 @@ public class LevelGenerator2 : MonoBehaviour
 
         grid = CreateGrid();
 
-        StartCoroutine(GenerateFloor(0));
+        GenerateFloor(0);
     }
 
     private void OnDrawGizmos()
     {
-        foreach(Vector2 space in grid)
+        /*
+        foreach (Vector2 space in grid)
         {
             Gizmos.DrawSphere(new Vector3(space.x, 0f, space.y), 1f);
+        }
+        */
+
+        Gizmos.color = Color.red;
+
+        foreach (Vector3 position in hallwayPositions)
+        {
+            Gizmos.DrawSphere(position, 1f);
         }
     }
 
@@ -42,7 +87,7 @@ public class LevelGenerator2 : MonoBehaviour
      *Rooms are created in passes, with essential rooms being placed in the first pass, filler rooms in
      *the second, doors in the third, and hallways in the fourth.
      */
-    IEnumerator GenerateFloor(int floorPos)
+    private void GenerateFloor(int floorPos)
     {
         GameObject room;
         Vector3 roomPos;
@@ -71,7 +116,15 @@ public class LevelGenerator2 : MonoBehaviour
             retries = 0;
             grid.Remove(new Vector2(roomPos.x, roomPos.z));
             rooms.Add(room.transform);
-            yield return null;
+            roomPositions.Add(FixVector3Floats(room.transform.position));
+
+            foreach (Transform child in room.transform)
+            {
+                if (child.name.Contains("Footprint"))
+                {
+                    roomPositions.Add(FixVector3Floats(child.position));
+                }
+            }
 
             /*
              * MOVE TO APPROPRIATE METHOD AFTER DOOR PASS
@@ -89,19 +142,18 @@ public class LevelGenerator2 : MonoBehaviour
             */
         }
 
-        yield return null;
 
         roomsPlaced = true;
         
         AddGridPadding(1);
 
-        StartCoroutine(DoorPass(floorPos));
+        DoorPass(floorPos);
 
         //DrawLinks();
     }
 
     //Iterate over each room, removing overlapping walls and generating at least one door per room.
-    IEnumerator DoorPass(int floorPos)
+    private void DoorPass(int floorPos)
     {
         Vector3 localPosition;
         Quaternion localRotation;
@@ -156,11 +208,11 @@ public class LevelGenerator2 : MonoBehaviour
                     {
                         if (child.name == "Connection Point")
                         {
-                            Debug.Log("connection point found");
-                            Debug.Log(child.transform.position);
+                            //connectionPoints.Add(child);
                             if (grid.Contains(new Vector2(Mathf.RoundToInt(child.transform.position.x), Mathf.RoundToInt(child.transform.position.z))))
                             {
                                 connectionPoints.Add(child);
+                                connectionPointPositions.Add(FixVector3Floats(child.position));
                                 grid.Remove(new Vector2(Mathf.RoundToInt(child.transform.position.x), Mathf.RoundToInt(child.transform.position.z)));
                             }
                         }
@@ -170,24 +222,33 @@ public class LevelGenerator2 : MonoBehaviour
                 {
                     wallList.RemoveAt(0);
                 }
-
-                yield return null;
             }
         }
 
-        //StartCoroutine(HallPass(floorPos, connectionPoints));
+        HallPass(floorPos, connectionPoints);
     }
 
-    IEnumerator HallPass(int floorpos, List<Transform> connectionPoints)
+    private void HallPass(int floorpos, List<Transform> connectionPoints)
     {
-        Debug.Log(connectionPoints.Count);
-        foreach(Transform point in connectionPoints)
+        int i = 0;
+
+        while (i < connectionPoints.Count)
         {
-            Debug.Log("hello");
-            GameObject.Instantiate(hallPrefab, point.transform.position, point.transform.rotation);
+            ConstructHall(FixVector3Floats(connectionPoints[i].position), FixVector3Floats(connectionPoints[Random.Range(0, connectionPoints.Count)].position));
+            i++;
+        }
+        
+        foreach (Transform connectionPoint in connectionPoints)
+        {
+            //hallwayPositions.Add(FixVector3Floats(connectionPoint.position));
         }
 
-        yield return null;
+        foreach (Vector3 position in hallwayPositions)
+        {
+            InstatiateHall(position);        
+        }
+        
+        
     }
 
     void DrawLinks()
@@ -637,5 +698,230 @@ public class LevelGenerator2 : MonoBehaviour
             }
             i++;
         }
+    }
+
+
+    private void ConstructHall (Vector3 connectionpoint1, Vector3 connectionpoint2)
+    {
+        tempNeighborSpaces.Clear();
+
+        if (hallwayPositions.Contains(connectionpoint1) == false)
+        {
+            hallwayPositions.Add(connectionpoint1);
+        }
+
+        getNeighborSpaces(connectionpoint1);
+
+        if(tempNeighborSpaces.Count == 0)
+        {
+            return;
+        }
+
+        Vector3 closestPoint = tempNeighborSpaces[0];
+
+
+        foreach (Vector3 space in tempNeighborSpaces)
+        {
+            Debug.Log(roomPositions.Count);
+            if (roomPositions.Contains(space))
+            {
+                Debug.Log("hello");
+                continue;
+            }
+            if(Mathf.Abs(Vector3.Distance(space, connectionpoint2)) <= Mathf.Abs(Vector3.Distance(closestPoint, connectionpoint2)))
+            {
+                closestPoint = space;
+            }
+        }
+
+        if(closestPoint == connectionpoint2)
+        {
+            //Debug.DrawLine(connectionpoint1, closestPoint, Color.red, 999);
+            return;
+        }
+        //Debug.DrawLine(connectionpoint1, closestPoint, Color.red, 999);
+
+        if(hallwayPositions.Contains(closestPoint) == false)
+        {
+            hallwayPositions.Add(closestPoint);
+        }
+        else
+        {
+            return;
+        }
+
+        ConstructHall(closestPoint, connectionpoint2);
+    }
+
+    private void getNeighborSpaces(Vector3 position)
+    {
+
+        Vector3 roundedPosition = new Vector3(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.y), Mathf.RoundToInt(position.z));
+
+
+        if (grid.Contains(new Vector2(roundedPosition.x + 10, roundedPosition.z)))
+        {
+            tempNeighborSpaces.Add(new Vector3(roundedPosition.x + 10, roundedPosition.y, roundedPosition.z));
+        }
+
+        if(grid.Contains(new Vector2(roundedPosition.x - 10, roundedPosition.z)))
+        {
+            tempNeighborSpaces.Add(new Vector3(roundedPosition.x - 10, roundedPosition.y, roundedPosition.z));
+        }
+        
+        if(grid.Contains(new Vector2(roundedPosition.x, roundedPosition.z + 10)))
+        {
+            tempNeighborSpaces.Add(new Vector3(roundedPosition.x, roundedPosition.y, roundedPosition.z + 10));
+        }
+
+        if(grid.Contains(new Vector2(roundedPosition.x, roundedPosition.z - 10)))
+        {
+            tempNeighborSpaces.Add(new Vector3(roundedPosition.x, roundedPosition.y, roundedPosition.z - 10));
+        }
+    }
+
+    private List<int> determineWallPositions(Vector3 position)
+    {
+
+        wallPositions = new List<int> { 0, 0, 0, 0 }; 
+
+        Vector3 roundedPosition = new Vector3(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.y), Mathf.RoundToInt(position.z));
+
+        if (hallwayPositions.Contains(new Vector3(roundedPosition.x + 10, roundedPosition.y, roundedPosition.z)))
+        {
+            wallPositions[0] = 1;
+        }
+
+        if (hallwayPositions.Contains(new Vector3(roundedPosition.x - 10, roundedPosition.y, roundedPosition.z)))
+        {
+            wallPositions[2] = 1;
+        }
+
+        if (hallwayPositions.Contains(new Vector3(roundedPosition.x, roundedPosition.y, roundedPosition.z + 10)))
+        {
+            wallPositions[1] = 1;
+        }
+
+        if (hallwayPositions.Contains(new Vector3(roundedPosition.x, roundedPosition.y, roundedPosition.z - 10)))
+        {
+            wallPositions[3] = 1;
+        }
+
+        if (connectionPointPositions.Contains(position))
+        {
+            if (roomPositions.Contains(new Vector3(roundedPosition.x + 10, roundedPosition.y, roundedPosition.z)))
+            {
+                wallPositions[0] = 1;
+            }
+
+            if (roomPositions.Contains(new Vector3(roundedPosition.x - 10, roundedPosition.y, roundedPosition.z)))
+            {
+                wallPositions[2] = 1;
+            }
+
+            if (roomPositions.Contains(new Vector3(roundedPosition.x, roundedPosition.y, roundedPosition.z + 10)))
+            {
+                wallPositions[1] = 1;
+            }
+
+            if (roomPositions.Contains(new Vector3(roundedPosition.x, roundedPosition.y, roundedPosition.z - 10)))
+            {
+                wallPositions[3] = 1;
+            }
+        }
+
+        return wallPositions;
+    }
+
+    private Vector3 FixVector3Floats (Vector3 position)
+    {
+        Vector3 fixedVector3 = new Vector3(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.y), Mathf.RoundToInt(position.z));
+
+        return fixedVector3;
+    }
+
+    private void InstatiateHall(Vector3 position)
+    {
+        List<int> wallPositions = determineWallPositions(position);
+
+
+        if(wallPositions.SequenceEqual(crossHallPositions))
+        {
+            GameObject.Instantiate(crossHall, position, Quaternion.identity);
+        }
+        else if(wallPositions.SequenceEqual(tHallWest))
+        {
+            GameObject.Instantiate(tHall, position, Quaternion.identity);
+        }
+        else if (wallPositions.SequenceEqual(tHallEast))
+        {
+            GameObject hall = GameObject.Instantiate(tHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 180f, 0f);
+        }
+        else if(wallPositions.SequenceEqual(tHallNorth))
+        {
+            GameObject hall = GameObject.Instantiate(tHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 270f, 0f);
+        }
+        else if(wallPositions.SequenceEqual(tHallSouth))
+        {
+            GameObject hall = GameObject.Instantiate(tHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 90f, 0f);
+        }
+        else if(wallPositions.SequenceEqual(lHallNorthEast))
+        {
+            GameObject hall = GameObject.Instantiate(lHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 180f, 0f);
+        }
+        else if (wallPositions.SequenceEqual(lHallSouthWest))
+        {
+            GameObject hall = GameObject.Instantiate(lHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 0f, 0f);
+        }
+        else if (wallPositions.SequenceEqual(lHallNorthWest))
+        {
+            GameObject hall = GameObject.Instantiate(lHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 90f, 0f);
+        }
+        else if (wallPositions.SequenceEqual(lHallSouthEast))
+        {
+            GameObject hall = GameObject.Instantiate(lHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 270f, 0f);
+        }
+        else if (wallPositions.SequenceEqual(straightHallNorthSouth))
+        {
+            GameObject hall = GameObject.Instantiate(straightHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 90f, 0f);
+        }
+        else if (wallPositions.SequenceEqual(straightHallEastWest))
+        {
+            GameObject hall = GameObject.Instantiate(straightHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 0f, 0f);
+        }
+        else if (wallPositions.SequenceEqual(capHallWest))
+        {
+            GameObject hall = GameObject.Instantiate(capHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 0f, 0f);
+        }
+        else if (wallPositions.SequenceEqual(capHallEast))
+        {
+            GameObject hall = GameObject.Instantiate(capHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 180f, 0f);
+        }
+        else if (wallPositions.SequenceEqual(capHallNorth))
+        {
+            GameObject hall = GameObject.Instantiate(capHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 270f, 0f);
+        }
+        else if (wallPositions.SequenceEqual(capHallSouth))
+        {
+            GameObject hall = GameObject.Instantiate(capHall, position, Quaternion.identity);
+            hall.transform.Rotate(0f, 90f, 0f);
+        }
+        else
+        {
+            GameObject.Instantiate(straightHall, position, Quaternion.identity);
+        }
+
     }
 }
