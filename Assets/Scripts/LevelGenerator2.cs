@@ -8,25 +8,28 @@ public class LevelGenerator2 : MonoBehaviour
 
 
     public List<GameObject> possibleRooms = new List<GameObject>();
+    public List<GameObject> essentialRooms = new List<GameObject>();
     public GameObject doorPrefab;
     public GameObject straightHall;
     public GameObject lHall;
     public GameObject tHall;
     public GameObject crossHall;
     public GameObject capHall;
+
+
     List<Transform> connectionPoints = new List<Transform>();
     List<Vector3> connectionPointPositions = new List<Vector3>();
     List<Transform> rooms = new List<Transform>();
     List<Vector3> roomPositions = new List<Vector3>();
     List<Vector2> grid;
     List<Transform> hallway;
-    public List<Vector3> hallwayPositions = new List<Vector3>();
+    List<Vector3> hallwayPositions = new List<Vector3>();
     List<Vector3> tempNeighborSpaces = new List<Vector3>();
 
 
 
 
-    //Arrays for determining wall placement
+    //Lists for determining wall placement
     List<int> wallPositions = new List<int> { 0, 0, 0, 0 };
 
     List<int> crossHallPositions = new List<int> { 1, 1, 1, 1 };
@@ -66,12 +69,12 @@ public class LevelGenerator2 : MonoBehaviour
 
     private void OnDrawGizmos()
     {
-        /*
+        
         foreach (Vector2 space in grid)
         {
             Gizmos.DrawSphere(new Vector3(space.x, 0f, space.y), 1f);
         }
-        */
+        
 
         Gizmos.color = Color.red;
 
@@ -89,6 +92,7 @@ public class LevelGenerator2 : MonoBehaviour
      */
     private void GenerateFloor(int floorPos)
     {
+        GenerateEssentialRooms(floorPos);
         GameObject room;
         Vector3 roomPos;
         int retries = 0;
@@ -193,6 +197,12 @@ public class LevelGenerator2 : MonoBehaviour
             //Ensure at least one door generates per room, with additional doors generating if the random range hits.
             while (wallList.Count > 0)
             {
+                //Special case for making sure the player start room doesn't generate a door on it's outermost wall.
+                if (wallList[0].position.x > (boundsX * 10) + 10)
+                {
+                    wallList.RemoveAt(0);
+                    continue;
+                }
                 if (wallList.Count == 1 || Random.Range(1, 100) >= 70)
                 {
                     localPosition = new Vector3(wallList[0].transform.position.x, floorPos, wallList[0].transform.position.z);
@@ -698,6 +708,9 @@ public class LevelGenerator2 : MonoBehaviour
             }
             i++;
         }
+
+        GameObject startingRoom = GameObject.Find("PlayerStartingRoom(Clone)");
+        grid.Remove(new Vector2(startingRoom.transform.position.x, startingRoom.transform.position.z));
     }
 
 
@@ -722,7 +735,6 @@ public class LevelGenerator2 : MonoBehaviour
 
         foreach (Vector3 space in tempNeighborSpaces)
         {
-            Debug.Log(roomPositions.Count);
             if (roomPositions.Contains(space))
             {
                 Debug.Log("hello");
@@ -901,12 +913,12 @@ public class LevelGenerator2 : MonoBehaviour
         else if (wallPositions.SequenceEqual(capHallWest))
         {
             GameObject hall = GameObject.Instantiate(capHall, position, Quaternion.identity);
-            hall.transform.Rotate(0f, 0f, 0f);
+            hall.transform.Rotate(0f, 180f, 0f);
         }
         else if (wallPositions.SequenceEqual(capHallEast))
         {
             GameObject hall = GameObject.Instantiate(capHall, position, Quaternion.identity);
-            hall.transform.Rotate(0f, 180f, 0f);
+            hall.transform.Rotate(0f, 0f, 0f);
         }
         else if (wallPositions.SequenceEqual(capHallNorth))
         {
@@ -923,5 +935,54 @@ public class LevelGenerator2 : MonoBehaviour
             GameObject.Instantiate(straightHall, position, Quaternion.identity);
         }
 
+    }
+
+    private void GenerateEssentialRooms(int floorPos)
+    {
+        GameObject room;
+        Vector3 roomPos;
+        int retries = 0;
+        for (int i = 0; i <= essentialRooms.Count() - 1; i++)
+        {
+            if (i == 0)
+            {
+                roomPos = new Vector3((boundsX * 10) + 10, floorPos, (boundsY / 2) * 10);
+                room = Instantiate(essentialRooms[i], roomPos, new Quaternion(Quaternion.identity.x, Quaternion.identity.y, Quaternion.identity.z, Quaternion.identity.w));
+                room.transform.Rotate(0f, Mathf.Abs(Random.Range(1, 5) * 90f), 0f);
+            }
+            else
+            {
+                int gridIndex = Mathf.RoundToInt(Random.Range(0, grid.Count));
+                roomPos = new Vector3(grid[gridIndex].x, floorPos, grid[gridIndex].y);
+                room = Instantiate(essentialRooms[i], roomPos, new Quaternion(Quaternion.identity.x, Quaternion.identity.y, Quaternion.identity.z, Quaternion.identity.w));
+                room.transform.Rotate(0f, Mathf.Abs(Random.Range(1, 5) * 90f), 0f);
+            }
+            //Gives the room several chances to generate. If it cannot find an adequate spot in 10 tries,
+            //assume there are no possible spots and break out of the loop.
+            if (CheckRoomFootprint(room) == false)
+            {
+                GameObject.Destroy(room);
+                i--;
+                retries++;
+                if (retries < 10)
+                {
+                    continue;
+                }
+            }
+
+            //Resest the retries for the next overlap scenario.
+            retries = 0;
+            grid.Remove(new Vector2(roomPos.x, roomPos.z));
+            rooms.Add(room.transform);
+            roomPositions.Add(FixVector3Floats(room.transform.position));
+
+            foreach (Transform child in room.transform)
+            {
+                if (child.name.Contains("Footprint"))
+                {
+                    roomPositions.Add(FixVector3Floats(child.position));
+                }
+            }
+        }
     }
 }
