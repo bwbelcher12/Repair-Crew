@@ -12,7 +12,7 @@ public class PlayerMovementController : MonoBehaviour
     private PlayerInputActions playerInputActions;
     private Vector3 playerVelocity;
     public bool groundedPlayer;
-    private float jumpHeight = .2f;
+    public float jumpHeight = 1f;
     private float gravityValue = -15f;
 
     private Quaternion playerRotation;
@@ -40,19 +40,11 @@ public class PlayerMovementController : MonoBehaviour
         Move();
         MoveCamera();
 
-        if (playerInputActions.Player.Jump.triggered)
+        if (playerInputActions.Player.Jump.triggered && groundedPlayer)
         {
             Jump();
         }
 
-
-
-
-        // Makes the player jump
-        if (Input.GetButtonDown("Jump") && groundedPlayer)
-        {
-            playerVelocity.y += Mathf.Sqrt(jumpHeight * -2.0f * gravityValue);
-        }
         controller.Move(playerVelocity * Time.deltaTime);
 
     }
@@ -75,34 +67,27 @@ public class PlayerMovementController : MonoBehaviour
 
     private void Move()
     {
-        //transform.eulerAngles = new Vector3(0f, cameraEulerAngles.y, 0f);
         playerRotation = playerCamera.transform.rotation;
-
-        //MoveStepChecker(Vector2.zero);
 
         if (inputForce.y > 0)
         {
             Vector2 forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.y) * Time.deltaTime, playerRotation.eulerAngles.y);
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
-            //MoveStepChecker(forceVector);
         }
         if (inputForce.y < 0)
         {
             Vector2 forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.y) * Time.deltaTime, playerRotation.eulerAngles.y + 180f);
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
-            //MoveStepChecker(forceVector);
         }
         if (inputForce.x > 0)
         {
             Vector2 forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 90);
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
-            //MoveStepChecker(forceVector);
         }
         if (inputForce.x < 0)
         {
             Vector2 forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 270);
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
-            //MoveStepChecker(forceVector);
         }
         groundedPlayer = IsGrounded();
         if (playerVelocity.y < 0 && groundedPlayer)
@@ -110,7 +95,6 @@ public class PlayerMovementController : MonoBehaviour
             playerVelocity.y = 0f;
         }
         playerVelocity.y += gravityValue * Time.deltaTime;
-        //Debug.Log(rb.velocity);
     }
 
     private void Jump()
@@ -132,13 +116,9 @@ public class PlayerMovementController : MonoBehaviour
     private bool IsGrounded()
     {
         hitDetect = Physics.BoxCast(controller.transform.position, transform.localScale * 0.5f, Vector3.down, out hit, transform.rotation, controller.transform.lossyScale.y * .67f);
-        Debug.DrawLine(controller.transform.position, controller.transform.position + Vector3.down, Color.red);
-        Debug.Log(hitDetect);
-        //Debug.Log("hello");
         if (hitDetect)
         {
             //Output the name of the Collider your Box hit
-            Debug.Log("Hit : " + hit.collider.name);
             return true;
         }
             return false;
