@@ -1,6 +1,4 @@
-using System.Collections;
-using System.Collections.Generic;
-using Unity.Netcode;
+using Mirror;
 using UnityEngine;
 
 public class PlayerMovementController : NetworkBehaviour
@@ -8,7 +6,7 @@ public class PlayerMovementController : NetworkBehaviour
     public float sensitivity = 1f;
     public float playerSpeed = .2f;
 
-    public NetworkVariable<Vector3> Position = new NetworkVariable<Vector3>();
+    private NetworkTransformReliable networkTransform;
 
     private CharacterController controller;
     private PlayerInputActions playerInputActions;
@@ -29,20 +27,15 @@ public class PlayerMovementController : NetworkBehaviour
 
     public Camera playerCamera;
 
-    private void Awake()
+    private void Start()
     {
         playerInputActions = new PlayerInputActions();
         playerInputActions.Player.Enable();
         controller = transform.GetComponent<CharacterController>();
-    }
-
-    public override void OnNetworkSpawn()
-    {
-        if(IsOwner)
+        networkTransform = transform.GetComponent<NetworkTransformReliable>();
+        Debug.Log(networkTransform.isOwned);
+        if(networkTransform.isOwned)
         {
-            Debug.Log(OwnerClientId);
-            Debug.Log(IsOwner);
-            SubmitPositionRequestRpc();
             playerCamera.enabled = enabled;
         }
     }
@@ -50,11 +43,14 @@ public class PlayerMovementController : NetworkBehaviour
     // Update is called once per frame
     void Update()
     {
-        if(IsOwner)
+        if(!networkTransform.isOwned)
         {
-            SubmitPositionRequestRpc();
-            
+            return;            
         }
+        MoveCamera();
+        Move();
+        Jump();
+        
     }
 
     private void MoveCamera()
@@ -69,11 +65,14 @@ public class PlayerMovementController : NetworkBehaviour
         cameraTilt -= (tiltInput * sensitivity * -1);
         cameraTilt = Mathf.Clamp(cameraTilt, -90f, 90f);
         cameraPan -= (panInput * sensitivity * -1);
-        playerCamera.transform.eulerAngles = new Vector3(cameraTilt, cameraPan, 0f);
+        playerCamera.transform.eulerAngles = new Vector3(cameraTilt, playerCamera.transform.eulerAngles.y, 0f);
+        controller.transform.eulerAngles = new Vector3(transform.eulerAngles.x, cameraPan, 0f);
     }
 
     private void Move()
     {
+        inputForce = playerInputActions.Player.Move.ReadValue<Vector2>();
+
         playerRotation = playerCamera.transform.rotation;
 
         if (inputForce.y > 0)
@@ -96,21 +95,21 @@ public class PlayerMovementController : NetworkBehaviour
             Vector2 forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 270);
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
+        controller.Move(new Vector3(0f, playerVelocity.y, 0f));
         groundedPlayer = IsGrounded();
         if (playerVelocity.y < 0 && groundedPlayer)
         {
             playerVelocity.y = 0f;
         }
-
-        Debug.Log(playerVelocity.y);
-        playerVelocity.y += gravityValue * Time.deltaTime;
+        playerVelocity.y = gravityValue * Time.deltaTime;
     }
 
     private void Jump()
     {
-     
-        playerVelocity.y += Mathf.Sqrt(jumpHeight * -2.0f * gravityValue);
-        
+        if (playerInputActions.Player.Jump.triggered && groundedPlayer)
+        {
+            playerVelocity.y += Mathf.Sqrt(jumpHeight * -2.0f * gravityValue * Time.deltaTime);
+        }
     }
 
     private Vector2 CalcuateForceVector(float force, float theta)
@@ -127,33 +126,9 @@ public class PlayerMovementController : NetworkBehaviour
         hitDetect = Physics.BoxCast(controller.transform.position, transform.localScale * 0.5f, Vector3.down, out hit, transform.rotation, controller.transform.lossyScale.y * .67f);
         if (hitDetect)
         {
-            //Output the name of the Collider your Box hit
             return true;
         }
             return false;
-    }
-
-    [Rpc(SendTo.Server)]
-    void SubmitPositionRequestRpc(RpcParams rpcParams = default)
-    {
-        inputForce = playerInputActions.Player.Move.ReadValue<Vector2>();
-
-        Move();
-
-        if (playerInputActions.Player.Jump.triggered && groundedPlayer)
-        {
-            Jump();
-        }
-        MoveCamera();
-    }
-
-    private Vector3 SimpleMove()
-    {
-        if (inputForce.y > 0)
-        {
-            return transform.position + Vector3.forward;
-        }
-        return transform.position + Vector3.zero;
     }
 }
 
