@@ -1,12 +1,14 @@
 using System.Collections;
 using System.Collections.Generic;
+using Unity.Netcode;
 using UnityEngine;
 
-public class PlayerMovementController : MonoBehaviour
+public class PlayerMovementController : NetworkBehaviour
 {
     public float sensitivity = 1f;
     public float playerSpeed = .2f;
 
+    public NetworkVariable<Vector3> Position = new NetworkVariable<Vector3>();
 
     private CharacterController controller;
     private PlayerInputActions playerInputActions;
@@ -34,19 +36,25 @@ public class PlayerMovementController : MonoBehaviour
         controller = transform.GetComponent<CharacterController>();
     }
 
+    public override void OnNetworkSpawn()
+    {
+        if(IsOwner)
+        {
+            Debug.Log(OwnerClientId);
+            Debug.Log(IsOwner);
+            SubmitPositionRequestRpc();
+            playerCamera.enabled = enabled;
+        }
+    }
+
     // Update is called once per frame
     void Update()
     {
-        Move();
-        MoveCamera();
-
-        if (playerInputActions.Player.Jump.triggered && groundedPlayer)
+        if(IsOwner)
         {
-            Jump();
+            SubmitPositionRequestRpc();
+            
         }
-
-        controller.Move(playerVelocity * Time.deltaTime);
-
     }
 
     private void MoveCamera()
@@ -54,7 +62,6 @@ public class PlayerMovementController : MonoBehaviour
         Vector2 mouseMovement = playerInputActions.Player.FirstPersonCameraMove.ReadValue<Vector2>();
         cameraEulerAngles = playerCamera.transform.rotation.eulerAngles;
         SetCameraRotation(mouseMovement.y, mouseMovement.x);
-        inputForce = playerInputActions.Player.Move.ReadValue<Vector2>();  
     }
 
     private void SetCameraRotation(float tiltInput, float panInput)
@@ -94,6 +101,8 @@ public class PlayerMovementController : MonoBehaviour
         {
             playerVelocity.y = 0f;
         }
+
+        Debug.Log(playerVelocity.y);
         playerVelocity.y += gravityValue * Time.deltaTime;
     }
 
@@ -122,6 +131,29 @@ public class PlayerMovementController : MonoBehaviour
             return true;
         }
             return false;
+    }
+
+    [Rpc(SendTo.Server)]
+    void SubmitPositionRequestRpc(RpcParams rpcParams = default)
+    {
+        inputForce = playerInputActions.Player.Move.ReadValue<Vector2>();
+
+        Move();
+
+        if (playerInputActions.Player.Jump.triggered && groundedPlayer)
+        {
+            Jump();
+        }
+        MoveCamera();
+    }
+
+    private Vector3 SimpleMove()
+    {
+        if (inputForce.y > 0)
+        {
+            return transform.position + Vector3.forward;
+        }
+        return transform.position + Vector3.zero;
     }
 }
 
