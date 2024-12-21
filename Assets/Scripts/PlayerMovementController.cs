@@ -33,7 +33,6 @@ public class PlayerMovementController : NetworkBehaviour
         playerInputActions.Player.Enable();
         controller = transform.GetComponent<CharacterController>();
         networkTransform = transform.GetComponent<NetworkTransformReliable>();
-        Debug.Log(networkTransform.isOwned);
         if(networkTransform.isOwned)
         {
             playerCamera.enabled = enabled;
@@ -95,20 +94,20 @@ public class PlayerMovementController : NetworkBehaviour
             Vector2 forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 270);
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
-        controller.Move(new Vector3(0f, playerVelocity.y, 0f));
+        controller.Move(new Vector3(0f, playerVelocity.y * Time.deltaTime, 0f));
         groundedPlayer = IsGrounded();
         if (playerVelocity.y < 0 && groundedPlayer)
         {
             playerVelocity.y = 0f;
         }
-        playerVelocity.y = gravityValue * Time.deltaTime;
+        playerVelocity.y += gravityValue * Time.deltaTime;
     }
 
     private void Jump()
     {
         if (playerInputActions.Player.Jump.triggered && groundedPlayer)
         {
-            playerVelocity.y += Mathf.Sqrt(jumpHeight * -2.0f * gravityValue * Time.deltaTime);
+            playerVelocity.y += Mathf.Sqrt(jumpHeight * -2.0f * gravityValue);
         }
     }
 
@@ -123,7 +122,7 @@ public class PlayerMovementController : NetworkBehaviour
 
     private bool IsGrounded()
     {
-        hitDetect = Physics.BoxCast(controller.transform.position, transform.localScale * 0.5f, Vector3.down, out hit, transform.rotation, controller.transform.lossyScale.y * .67f);
+        hitDetect = Physics.BoxCast(controller.transform.position, transform.localScale * 0.5f, Vector3.down, out hit, transform.rotation, controller.transform.lossyScale.y * .62f);
         if (hitDetect)
         {
             return true;
