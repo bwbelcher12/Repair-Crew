@@ -49,7 +49,7 @@ public class SteamLobby : MonoBehaviour
 
     private void OnLobbyCreated(LobbyCreated_t callback)
     {
-        if(callback.m_eResult != EResult.k_EResultOK)
+        if (callback.m_eResult != EResult.k_EResultOK)
         {
             menuUI.SetActive(true);
             disconnectUI.SetActive(false);
@@ -70,6 +70,7 @@ public class SteamLobby : MonoBehaviour
     {
         currentLobbyID = new CSteamID(callback.m_ulSteamIDLobby);
 
+
         if (NetworkServer.active)
         {
             return;
@@ -84,19 +85,30 @@ public class SteamLobby : MonoBehaviour
         disconnectUI.SetActive(true);
         menuCamera.enabled = false;
         menuCamera.GetComponent<AudioListener>().enabled = false;
+        StartCoroutine(DeleteDoorsAfterClientReady());
     }
 
     IEnumerator GenerateWorldAfterClientReady()
     {
-        while(!NetworkClient.ready)
+        while (!NetworkClient.ready)
         {
-            yield return null; ;
+            yield return null;
         }
 
         NetworkConnectionToClient conn = new NetworkConnectionToClient(NetworkClient.connection.connectionId, clientAddress: "localhost");
         levelGenerator.SetActive(true);
         levelGenerator.GetComponent<LevelGenerator2>().GenerateLevel();
     }
+
+    IEnumerator DeleteDoorsAfterClientReady()
+    {
+        while (!NetworkClient.ready)
+        {
+            yield return null;
+        }
+        levelGenerator.GetComponent<LevelGenerator2>().ServerDestroyExtraWalls();
+    }
+
 
     public void ExitLobby()
     {

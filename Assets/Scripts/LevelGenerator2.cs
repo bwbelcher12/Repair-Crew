@@ -27,6 +27,8 @@ public class LevelGenerator2 : NetworkBehaviour
     List<Vector3> tempNeighborSpaces = new List<Vector3>();
     List<Transform> doorWalls = new List<Transform>();
 
+    List<GameObject> serverSideOverlappingWalls = new List<GameObject>();
+
     List<GameObject> overlappingWalls = new List<GameObject>();
     List<Transform> rooms = new List<Transform>();
 
@@ -181,11 +183,7 @@ public class LevelGenerator2 : NetworkBehaviour
             //Identify overlapping walls and separate them from non-overlapping walls
             foreach(Transform wall in walls)
             {
-                if(allWallPositions.Contains(FixVector3Floats(wall.transform.position)))
-                {
-                    overlappingWalls.Add(wall.gameObject);
-                }
-                else
+                if(!allWallPositions.Contains(FixVector3Floats(wall.transform.position)))
                 {
                     allWallPositions.Add(FixVector3Floats(wall.transform.position));
                     wallList.Add(wall);
@@ -208,7 +206,7 @@ public class LevelGenerator2 : NetworkBehaviour
                     localPosition = new Vector3(wallList[0].transform.position.x, floorPos, wallList[0].transform.position.z);
                     localRotation = wallList[0].transform.rotation;
 
-                    DestroyExtraWall(wallList[0]);
+                    overlappingWalls.Add(wallList[0].gameObject);
                     wallList.RemoveAt(0);
 
                     GameObject newDoor = GameObject.Instantiate(doorPrefab, localPosition, localRotation);
@@ -236,7 +234,7 @@ public class LevelGenerator2 : NetworkBehaviour
                 }
             }
         }
-
+        ServerDestroyExtraWalls();
         HallPass(floorPos, connectionPoints);
     }
 
@@ -993,13 +991,20 @@ public class LevelGenerator2 : NetworkBehaviour
 
 
     [Server]
-    private void DestroyExtraWall(Transform wall)
+    public void ServerDestroyExtraWalls()
     {
-        wall.parent = null;
-        wall.gameObject.AddComponent<NetworkIdentity>();
-        NetworkServer.UnSpawn(wall.gameObject);
-        Destroy(wall.gameObject);
+        foreach(GameObject wall in overlappingWalls)
+        { 
+            wall.transform.parent = null;
+            wall.AddComponent<NetworkIdentity>();
+            Debug.Log(wall.transform.position);
+            serverSideOverlappingWalls.Add(wall);
+            NetworkServer.UnSpawn(wall.gameObject);
+        }
+        //Destroy(wall.gameObject);
     }
+
+
 
     [Server]
     public void ClearLevel()
@@ -1012,5 +1017,6 @@ public class LevelGenerator2 : NetworkBehaviour
         hallwayPositions.Clear();
         tempNeighborSpaces.Clear();
         doorWalls.Clear();
+        overlappingWalls.Clear();
     }
 }
