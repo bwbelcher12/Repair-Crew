@@ -14,6 +14,7 @@ public class SteamLobby : MonoBehaviour
     [SerializeField] private Camera menuCamera;
     [SerializeField] private GameObject levelGenerator;
     private NetworkManager networkManager;
+    private CSteamID currentLobbyID = new CSteamID();
 
     private const string HostAddressKey = "HostAdress";
 
@@ -67,7 +68,9 @@ public class SteamLobby : MonoBehaviour
 
     private void OnLobbyEntered(LobbyEnter_t callback)
     {
-        if(NetworkServer.active)
+        currentLobbyID = new CSteamID(callback.m_ulSteamIDLobby);
+
+        if (NetworkServer.active)
         {
             return;
         }
@@ -101,7 +104,10 @@ public class SteamLobby : MonoBehaviour
         menuUI.SetActive(true);
         menuCamera.enabled = true;
         disconnectUI.SetActive(false);
+        SteamMatchmaking.LeaveLobby(currentLobbyID);
+        currentLobbyID = new CSteamID();
         networkManager.StopHost();
+
     }
 
 }

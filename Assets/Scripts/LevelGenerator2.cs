@@ -20,13 +20,15 @@ public class LevelGenerator2 : NetworkBehaviour
 
     List<Transform> connectionPoints = new List<Transform>();
     List<Vector3> connectionPointPositions = new List<Vector3>();
-    List<Transform> rooms = new List<Transform>();
     List<Vector3> roomPositions = new List<Vector3>();
     List<Vector2> grid;
     List<Transform> hallway;
     List<Vector3> hallwayPositions = new List<Vector3>();
     List<Vector3> tempNeighborSpaces = new List<Vector3>();
+    List<Transform> doorWalls = new List<Transform>();
 
+    List<GameObject> overlappingWalls = new List<GameObject>();
+    List<Transform> rooms = new List<Transform>();
 
 
 
@@ -101,7 +103,6 @@ public class LevelGenerator2 : NetworkBehaviour
      *Rooms are created in passes, with essential rooms being placed in the first pass, filler rooms in
      *the second, doors in the third, and hallways in the fourth.
      */
-    
     private void GenerateFloor(int floorPos)
     {
         GenerateEssentialRooms(floorPos);
@@ -169,7 +170,6 @@ public class LevelGenerator2 : NetworkBehaviour
         int wallsInRoom;
 
         List<Vector3> allWallPositions = new List<Vector3>();
-        List<GameObject> overlappingWalls = new List<GameObject>();
         List<Transform> wallList = new List<Transform>();
         List<Transform> connectionPoints = new List<Transform>();
 
@@ -192,12 +192,7 @@ public class LevelGenerator2 : NetworkBehaviour
                 }
             }
 
-            //Remove overlapping walls
-            foreach (GameObject wall in overlappingWalls)
-            {
-                GameObject.Destroy(wall);
-                NetworkServer.UnSpawn(wall);
-            }
+            
 
             //Ensure at least one door generates per room, with additional doors generating if the random range hits.
             while (wallList.Count > 0)
@@ -213,8 +208,7 @@ public class LevelGenerator2 : NetworkBehaviour
                     localPosition = new Vector3(wallList[0].transform.position.x, floorPos, wallList[0].transform.position.z);
                     localRotation = wallList[0].transform.rotation;
 
-                    NetworkServer.UnSpawn(wallList[0].gameObject);
-                    GameObject.Destroy(wallList[0].gameObject);
+                    DestroyExtraWall(wallList[0]);
                     wallList.RemoveAt(0);
 
                     GameObject newDoor = GameObject.Instantiate(doorPrefab, localPosition, localRotation);
@@ -995,6 +989,18 @@ public class LevelGenerator2 : NetworkBehaviour
         }
     }
 
+
+
+
+    [Server]
+    private void DestroyExtraWall(Transform wall)
+    {
+        wall.parent = null;
+        wall.gameObject.AddComponent<NetworkIdentity>();
+        NetworkServer.UnSpawn(wall.gameObject);
+        Destroy(wall.gameObject);
+    }
+
     [Server]
     public void ClearLevel()
     {
@@ -1005,5 +1011,6 @@ public class LevelGenerator2 : NetworkBehaviour
         grid.Clear();
         hallwayPositions.Clear();
         tempNeighborSpaces.Clear();
+        doorWalls.Clear();
     }
 }
