@@ -10,9 +10,15 @@ public class PlayerMovementController : NetworkBehaviour
 
     private CharacterController controller;
     private PlayerInputActions playerInputActions;
+    private NoClip noClip;
+
     private Vector3 playerVelocity;
     public bool groundedPlayer;
     public float jumpHeight = 1f;
+
+    private const float gravityConst = -15f;
+    private const float noClipConst = 0f;
+
     private float gravityValue = -15f;
 
     private Quaternion playerRotation;
@@ -33,6 +39,7 @@ public class PlayerMovementController : NetworkBehaviour
         playerInputActions.Player.Enable();
         controller = transform.GetComponent<CharacterController>();
         networkTransform = transform.GetComponent<NetworkTransformReliable>();
+        noClip = transform.GetComponent<NoClip>();
         if(networkTransform.isOwned)
         {
             playerCamera.enabled = enabled;
@@ -46,6 +53,7 @@ public class PlayerMovementController : NetworkBehaviour
         {
             return;            
         }
+        CheckNoClip();
         MoveCamera();
         Move();
         Jump();
@@ -128,6 +136,18 @@ public class PlayerMovementController : NetworkBehaviour
             return true;
         }
             return false;
+    }
+
+    private void CheckNoClip()
+    {
+        if (noClip.NoClipActive)
+        {
+            gravityValue = noClipConst;
+        }
+        else
+        {
+            gravityValue = gravityConst;
+        }
     }
 }
 

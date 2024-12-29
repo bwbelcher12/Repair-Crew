@@ -106,7 +106,7 @@ public class SteamLobby : MonoBehaviour
         {
             yield return null;
         }
-        levelGenerator.GetComponent<LevelGenerator2>().ServerDestroyExtraWalls();
+        levelGenerator.GetComponent<LevelGenerator2>().CmdDestroyExtraWalls();
     }
 
 

@@ -6,7 +6,7 @@ using Mirror;
 
 public class LevelGenerator2 : NetworkBehaviour
 {
-
+    [SerializeField] private bool doDrawGrizoms = true;
 
     public List<GameObject> possibleRooms = new List<GameObject>();
     public List<GameObject> essentialRooms = new List<GameObject>();
@@ -27,14 +27,18 @@ public class LevelGenerator2 : NetworkBehaviour
     List<Vector3> tempNeighborSpaces = new List<Vector3>();
     List<Transform> doorWalls = new List<Transform>();
 
-    List<GameObject> serverSideOverlappingWalls = new List<GameObject>();
+    //List<GameObject> serverSideOverlappingWalls = new List<GameObject>();
 
     List<GameObject> overlappingWalls = new List<GameObject>();
-    List<Transform> rooms = new List<Transform>();
 
+    [SyncVar]
+    [SerializeField] List<Transform> rooms = new List<Transform>();
 
+    private const string NetworkManagerName = "NetworkManager";
+    private NetworkManager networkManager = new NetworkManager();
 
     //Lists for determining wall placement
+    //*****************************************************************************************
     List<int> wallPositions = new List<int> { 0, 0, 0, 0 };
 
     List<int> crossHallPositions = new List<int> { 1, 1, 1, 1 };
@@ -56,6 +60,7 @@ public class LevelGenerator2 : NetworkBehaviour
     List<int> capHallSouth = new List<int> { 0, 0, 1, 0 };
     List<int> capHallEast = new List<int> { 0, 0, 0, 1 };
     List<int> capHallWest = new List<int> { 0, 1, 0, 0 };
+    //*****************************************************************************************
 
     public int roomCount;
     public int boundsX, boundsY;
@@ -69,6 +74,44 @@ public class LevelGenerator2 : NetworkBehaviour
 
     }
 
+    private void Start()
+    {
+        networkManager = GameObject.Find(NetworkManagerName).GetComponent<NetworkManager>();
+        if(isServer)
+        {
+            StartCoroutine(WaitForPlayers());
+        }
+    }
+
+    private IEnumerator WaitForPlayers()
+    {
+        bool allPlayersReady = false;
+
+        while(!allPlayersReady)
+        {
+            Debug.Log(allPlayersReady);
+            for (int i = 0; i < NetworkServer.connections.Count(); i++)
+            {
+                allPlayersReady = true;
+                if(!NetworkServer.connections[i].isReady)
+                {
+                    allPlayersReady = false;
+                }
+                yield return null;
+            }
+        }
+        GenerateLevel();
+        StopCoroutine(WaitForPlayers());
+    }
+
+    private void Update()
+    {
+        if(Input.GetKeyDown(KeyCode.O))
+        {
+            CmdDestroyExtraWalls();
+        }
+    }
+
     [Server]
     public void GenerateLevel()
     { 
@@ -79,10 +122,11 @@ public class LevelGenerator2 : NetworkBehaviour
         GenerateFloor(0);
     }
 
-    /*
+    
     private void OnDrawGizmos()
     {
-        
+        if (!doDrawGrizoms) { return; }
+
         foreach (Vector2 space in grid)
         {
             Gizmos.DrawSphere(new Vector3(space.x, 0f, space.y), 1f);
@@ -97,7 +141,7 @@ public class LevelGenerator2 : NetworkBehaviour
         }
     }
 
-    */
+    
 
     /*
      *Creates one layer of the map by iteratively instantiating new rooms. Rooms are place on the grid
@@ -206,7 +250,9 @@ public class LevelGenerator2 : NetworkBehaviour
                     localPosition = new Vector3(wallList[0].transform.position.x, floorPos, wallList[0].transform.position.z);
                     localRotation = wallList[0].transform.rotation;
 
-                    overlappingWalls.Add(wallList[0].gameObject);
+                    Debug.Log(NetworkClient.ready);
+
+                    RpcAddToOverlappingWalls(wallList[0].transform.GetSiblingIndex(), room.gameObject);
                     wallList.RemoveAt(0);
 
                     GameObject newDoor = GameObject.Instantiate(doorPrefab, localPosition, localRotation);
@@ -234,8 +280,8 @@ public class LevelGenerator2 : NetworkBehaviour
                 }
             }
         }
-        ServerDestroyExtraWalls();
         HallPass(floorPos, connectionPoints);
+       //CmdDestroyExtraWalls();
     }
 
     private void HallPass(int floorpos, List<Transform> connectionPoints)
@@ -257,8 +303,8 @@ public class LevelGenerator2 : NetworkBehaviour
         {
             InstatiateHall(FixVector3Floats(position));
         }
-        
-        
+
+        //ClientReady(true);
     }
 
     void DrawLinks()
@@ -990,21 +1036,24 @@ public class LevelGenerator2 : NetworkBehaviour
 
 
 
-    [Server]
-    public void ServerDestroyExtraWalls()
+    [ClientRpc]
+    public void CmdDestroyExtraWalls()
     {
-        foreach(GameObject wall in overlappingWalls)
-        { 
-            wall.transform.parent = null;
-            wall.AddComponent<NetworkIdentity>();
-            Debug.Log(wall.transform.position);
-            serverSideOverlappingWalls.Add(wall);
-            NetworkServer.UnSpawn(wall.gameObject);
+        foreach (Transform room in rooms)
+        {
+            room.GetComponent<SyncObjectsToDestroy>().IsEnabled = false;
+            //7Destroy(wall.gameObject);
         }
-        //Destroy(wall.gameObject);
+
     }
 
-
+    [ClientRpc]
+    private void RpcAddToOverlappingWalls(int wallIndex, GameObject room)
+    {
+        room.GetComponent<SyncObjectsToDestroy>().badWallIndicies.Add(wallIndex);
+        Debug.Log(room.GetComponent<SyncObjectsToDestroy>().badWallIndicies.Count);
+        //overlappingWalls.Add(wall);
+    }
 
     [Server]
     public void ClearLevel()

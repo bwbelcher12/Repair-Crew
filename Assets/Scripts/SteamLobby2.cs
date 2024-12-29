@@ -1,7 +1,8 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Mirror;
 using Steamworks;
-
+using System.Collections;
 
 /*
  * CREATED USING THIS TUTORIAL: https://youtu.be/QlbBC07dqnE?si=pn4OVR7YhtQzmFiZ  
@@ -13,7 +14,7 @@ public class SteamLobby2 : MonoBehaviour
     private CSteamID currentLobbyID = new CSteamID();
 
     private const string HostAddressKey = "HostAdress";
-
+    private const string LobbyScene = "LobbyScene";
     protected Callback<LobbyCreated_t> lobbyCreated;
     protected Callback<GameLobbyJoinRequested_t> gameLobbyJoinRequested;
     protected Callback<LobbyEnter_t> lobbyEntered;
@@ -51,6 +52,7 @@ public class SteamLobby2 : MonoBehaviour
 
     private void OnGameLobbyJoinRequested(GameLobbyJoinRequested_t callback)
     {
+        StartLoadCoroutine(LobbyScene);
         SteamMatchmaking.JoinLobby(callback.m_steamIDLobby);
     }
 
@@ -80,4 +82,20 @@ public class SteamLobby2 : MonoBehaviour
         networkManager.StopHost();
     }
 
+
+    public void StartLoadCoroutine(string sceneName)
+    {
+        StartCoroutine(LoadSceneAsync(sceneName));
+    }
+
+    private IEnumerator LoadSceneAsync(string sceneName)
+    {
+        AsyncOperation loadScene = SceneManager.LoadSceneAsync(sceneName);
+
+        while (!loadScene.isDone)
+        {
+            yield return null;
+        }
+
+    }
 }
