@@ -22,7 +22,6 @@ public class LevelGenerator2 : NetworkBehaviour
     List<Vector3> connectionPointPositions = new List<Vector3>();
     List<Vector3> roomPositions = new List<Vector3>();
     List<Vector2> grid;
-    List<Transform> hallway;
     List<Vector3> hallwayPositions = new List<Vector3>();
     List<Vector3> tempNeighborSpaces = new List<Vector3>();
     List<Transform> doorWalls = new List<Transform>();
@@ -62,6 +61,10 @@ public class LevelGenerator2 : NetworkBehaviour
     [SerializeField] private int roomCount;
     [SerializeField] private int boundsX, boundsY;
 
+    //When this object starts, we must wait for all clients to be connected
+    //and ready before generating the world. If we don't some of the data 
+    //about doors will be lost, and clients that connect late won't know 
+    //which walls need to be destroyed.
     private void Start()
     {
         if(isServer)
@@ -98,6 +101,33 @@ public class LevelGenerator2 : NetworkBehaviour
     }
 
     //-------------------------------------------------------
+    //CORUTINES
+    //-------------------------------------------------------
+
+    //Loops through all connections until each connection is ready.
+    //When all connections are ready, begin the level generation process.
+    private IEnumerator WaitForPlayers()
+    {
+        bool allPlayersReady = false;
+
+        while (!allPlayersReady)
+        {
+            Debug.Log(allPlayersReady);
+            for (int i = 0; i < NetworkServer.connections.Count(); i++)
+            {
+                allPlayersReady = true;
+                if (!NetworkServer.connections[i].isReady)
+                {
+                    allPlayersReady = false;
+                }
+                yield return null;
+            }
+        }
+        GenerateLevel();
+        StopCoroutine(WaitForPlayers());
+    }
+
+    //-------------------------------------------------------
     //SERVER FUNCTIONS
     //-------------------------------------------------------
 
@@ -108,6 +138,7 @@ public class LevelGenerator2 : NetworkBehaviour
         GenerateFloor(0);
     }
 
+    //This may be unnecessary now, but it is nice to have around.
     [Server]
     public void ClearLevel()
     {
@@ -126,23 +157,24 @@ public class LevelGenerator2 : NetworkBehaviour
     //CLIENTRPC FUNCTIONS
     //-------------------------------------------------------
 
-    [ClientRpc]
-    public void CmdDestroyExtraWalls()
-    {
-        foreach (Transform room in rooms)
-        {
-            room.GetComponent<SyncObjectsToDestroy>().IsEnabled = false;
-            //7Destroy(wall.gameObject);
-        }
-
-    }
+    //These functions are needed due to Mirror's no-nested-NetworkIdentity policy.
+    //Since the walls generate as children of a room prefab, they need to be destroyed 
+    //locally. 
 
     [ClientRpc]
     private void RpcAddToOverlappingWalls(int wallIndex, GameObject room)
     {
         room.GetComponent<SyncObjectsToDestroy>().badWallIndicies.Add(wallIndex);
         Debug.Log(room.GetComponent<SyncObjectsToDestroy>().badWallIndicies.Count);
-        //overlappingWalls.Add(wall);
+    }
+
+    [ClientRpc]
+    public void CmdDestroyExtraWalls()
+    {
+        foreach (Transform room in rooms)
+        {
+            room.GetComponent<SyncObjectsToDestroy>().IsEnabled = false;
+        }
     }
 
     /*
@@ -153,25 +185,111 @@ public class LevelGenerator2 : NetworkBehaviour
      */
     private void GenerateFloor(int floorPos)
     {
+        //This is called first so that we guarantee all the essential rooms on each floor generate properly.
         GenerateEssentialRooms(floorPos);
+
+        //Loop variables holding information about our rooma and where it should be spawned.
         GameObject room;
-        Vector3 roomPos;
+        Vector3 roomSpawnPos;
+        int gridIndex;
+        
+        //An iterator 
         int retries = 0;
+
         for (int i = 0; i < roomCount; i++)
         {
-            int gridIndex = Mathf.RoundToInt(Random.Range(0, grid.Count));
-            roomPos = new Vector3(grid[gridIndex].x, floorPos, grid[gridIndex].y);
-            room = Instantiate(possibleRooms[Random.Range(0, possibleRooms.Count)], roomPos, new Quaternion(Quaternion.identity.x, Quaternion.identity.y, Quaternion.identity.z, Quaternion.identity.w));
+            //Identify an empty space in our grid and create a room there. Since space are removed
+            //from the grid list 
+            gridIndex = Mathf.RoundToInt(Random.Range(0, grid.Count));
+            roomSpawnPos = new Vector3(grid[gridIndex].x, floorPos, grid[gridIndex].y);
+            room = Instantiate(possibleRooms[Random.Range(0, possibleRooms.Count)], roomSpawnPos, new Quaternion(Quaternion.identity.x, Quaternion.identity.y, Quaternion.identity.z, Quaternion.identity.w));
             room.transform.Rotate(0f, Mathf.Abs(Random.Range(1, 5) * 90f), 0f);
 
             //Gives the room several chances to generate. If it cannot find an adequate spot in 10 tries,
-            //assume there are no possible spots and break out of the loop.
+            //assume there are no possible spots and break out of the current loop iteration. Due to the 
+            //grid system, this really only happends with rooms that are not 1x1 cells.
             if(CheckRoomFootprint(room) == false)
+            {
+                //Destroy the overlapping room and reset the iterator. 
+                GameObject.Destroy(room);
+                i--;
+
+                //If we have tried more than 10 times, we can assume this room won't be able to spawn 
+                //and we continue on in the loop. This could cause the map to generate with fewer 
+                //filler rooms than specified, but that isn't really a big deal.
+                retries++;
+                if(retries > 10)
+                {
+                    continue;
+                }
+            }
+
+            //Resest the retries for the next overlap scenario.
+            retries = 0;
+
+            //Since we now know our room will generate without overlap, it can claim this position in 
+            //the grid and be added to the room list. 
+            grid.Remove(new Vector2(roomSpawnPos.x, roomSpawnPos.z));
+            rooms.Add(room.transform);
+            roomPositions.Add(FixVector3Floats(room.transform.position));
+
+            //Each non-standard room needs to have all the cells it takes up added to the room positions
+            //list.
+            foreach (Transform child in room.transform)
+            {
+                if (child.name.Contains("Footprint"))
+                {
+                    roomPositions.Add(FixVector3Floats(child.position));
+                }
+            }
+        }
+
+        //Since essential rooms are added to the rooms list and spawned on clients in
+        //GenerateEssentailRooms(), we start iterating through the rooms after their entries.
+        //Once all rooms on a floor have been placed on the server, they can be spawned on each client.
+        int j = essentialRooms.Count();
+        while (j < rooms.Count)
+        {
+            NetworkServer.Spawn(rooms[j].gameObject);
+            j++;
+        }
+
+        //Adds new gridspaces along the perimeter of the grid that hallways can use.
+        AddGridPadding(1);
+
+        //Once all our rooms are placed, we can begin adding doors to them.
+        DoorPass(floorPos);
+    }
+
+    //This function is almost identical to GenerateRooms() with a few special cases carved out.
+    private void GenerateEssentialRooms(int floorPos)
+    {
+        GameObject room;
+        Vector3 roomPos;
+        int retries = 0;
+        for (int i = 0; i <= essentialRooms.Count() - 1; i++)
+        {
+            if (i == 0)
+            {
+                roomPos = new Vector3((boundsX * 10) + 10, floorPos, (boundsY / 2) * 10);
+                room = Instantiate(essentialRooms[i], roomPos, new Quaternion(Quaternion.identity.x, Quaternion.identity.y, Quaternion.identity.z, Quaternion.identity.w));
+                room.transform.Rotate(0f, Mathf.Abs(Random.Range(1, 5) * 90f), 0f);
+            }
+            else
+            {
+                int gridIndex = Mathf.RoundToInt(Random.Range(0, grid.Count));
+                roomPos = new Vector3(grid[gridIndex].x, floorPos, grid[gridIndex].y);
+                room = Instantiate(essentialRooms[i], roomPos, new Quaternion(Quaternion.identity.x, Quaternion.identity.y, Quaternion.identity.z, Quaternion.identity.w));
+                room.transform.Rotate(0f, Mathf.Abs(Random.Range(1, 5) * 90f), 0f);
+            }
+            //Gives the room several chances to generate. If it cannot find an adequate spot in 10 tries,
+            //assume there are no possible spots and break out of the loop.
+            if (CheckRoomFootprint(room) == false)
             {
                 GameObject.Destroy(room);
                 i--;
                 retries++;
-                if(retries < 10)
+                if (retries < 10)
                 {
                     continue;
                 }
@@ -182,6 +300,7 @@ public class LevelGenerator2 : NetworkBehaviour
             grid.Remove(new Vector2(roomPos.x, roomPos.z));
             rooms.Add(room.transform);
             roomPositions.Add(FixVector3Floats(room.transform.position));
+            NetworkServer.Spawn(room);
 
             foreach (Transform child in room.transform)
             {
@@ -191,20 +310,6 @@ public class LevelGenerator2 : NetworkBehaviour
                 }
             }
         }
-
-        //Since essentail rooms are placed early, this ensures they aren't placed twice.
-        int j = essentialRooms.Count();
-        while (j < rooms.Count)
-        {
-            NetworkServer.Spawn(rooms[j].gameObject);
-            j++;
-        }
-
-        AddGridPadding(1);
-
-        DoorPass(floorPos);
-
-        //DrawLinks();
     }
 
     //Iterate over each room, removing overlapping walls and generating at least one door per room.
@@ -313,9 +418,10 @@ public class LevelGenerator2 : NetworkBehaviour
             }
         }
         HallPass(floorPos, connectionPoints);
-       //CmdDestroyExtraWalls();
     }
 
+    //First, each hallway is plotted, storing the grid positions for each hall piece in hallwayPositions.
+    //Then we iterate over each of those positions and instantiate the proper hall peice there.
     private void HallPass(int floorpos, List<Transform> connectionPoints)
     {
         int i = 0;
@@ -325,11 +431,6 @@ public class LevelGenerator2 : NetworkBehaviour
             ConstructHall(FixVector3Floats(connectionPoints[i].position), FixVector3Floats(connectionPoints[Random.Range(0, connectionPoints.Count)].position));
             i++;
         }
-        
-        foreach (Transform connectionPoint in connectionPoints)
-        {
-            //hallwayPositions.Add(FixVector3Floats(connectionPoint.position));
-        }
 
         foreach (Vector3 position in hallwayPositions)
         {
@@ -337,6 +438,8 @@ public class LevelGenerator2 : NetworkBehaviour
         }
     }
 
+    //Fucntion used to find "Connection Point" objects that are nested in a parent object.
+    //"Connection Points" are attached to doorways and indicate to the hall pass where halls should start.
     private Transform GetConnectionPoints(Transform parent)
     {
         if (parent == null)
@@ -386,6 +489,7 @@ public class LevelGenerator2 : NetworkBehaviour
         return grid;
     }
 
+    //Validates that non-1x1 rooms don't overlap with other rooms.
     private bool CheckRoomFootprint(GameObject room)
     {
         List<Vector2> tempPositions = new List<Vector2>();
@@ -412,6 +516,7 @@ public class LevelGenerator2 : NetworkBehaviour
         return true;
     }
 
+    //Adds the padding on the outside of the grid used by the starting room and some hallways.
     private void AddGridPadding (int paddingSize)
     {
         int i = -paddingSize + 1;
@@ -466,7 +571,10 @@ public class LevelGenerator2 : NetworkBehaviour
         grid.Remove(new Vector2(startingRoom.transform.position.x, startingRoom.transform.position.z));
     }
 
-
+    //This probably isn't the best way to do this, but it does give a good result so it will stay for now.
+    //Essentially, two connection points are passed to the function, the shortest path along the grid between
+    //them is added to the hallwayPositions list. It is recusive, and declaring too many variables in the 
+    //function body was causing some stack overflows, so be aware of that.
     private void ConstructHall (Vector3 connectionpoint1, Vector3 connectionpoint2)
     {
         tempNeighborSpaces.Clear();
@@ -515,10 +623,12 @@ public class LevelGenerator2 : NetworkBehaviour
         ConstructHall(closestPoint, connectionpoint2);
     }
 
+    //Finds neighboring positions on the grid. Grid spacing is currently hardcoded at 10, but that shouldn't
+    //need to change.
     private void getNeighborSpaces(Vector3 position)
     {
 
-        Vector3 roundedPosition = new Vector3(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.y), Mathf.RoundToInt(position.z));
+        Vector3 roundedPosition = FixVector3Floats(position);
 
 
         if (grid.Contains(new Vector2(roundedPosition.x + 10, roundedPosition.z)))
@@ -542,6 +652,8 @@ public class LevelGenerator2 : NetworkBehaviour
         }
     }
 
+    //Populate an array with information regarding walls in surrounding tiles. This is used by InstantiateHall()
+    //to determine which prefab to use.
     private List<int> determineWallPositions(Vector3 position)
     {
 
@@ -595,13 +707,9 @@ public class LevelGenerator2 : NetworkBehaviour
         return wallPositions;
     }
 
-    private Vector3 FixVector3Floats (Vector3 position)
-    {
-        Vector3 fixedVector3 = new Vector3(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.y), Mathf.RoundToInt(position.z));
-
-        return fixedVector3;
-    }
-
+  
+    //Long conditional that should probably be a switch case. THis determinies which hall prefab + rotation 
+    //should be used based on the contents of wallPositions.
     private void InstatiateHall(Vector3 position)
     {
         List<int> wallPositions = determineWallPositions(position);
@@ -688,77 +796,12 @@ public class LevelGenerator2 : NetworkBehaviour
         NetworkServer.Spawn(hall);
     }
 
-    private void GenerateEssentialRooms(int floorPos)
+    //Simple function that fixes some floating point errors that were being caused after rotating some prefabs.
+    private Vector3 FixVector3Floats(Vector3 position)
     {
-        GameObject room;
-        Vector3 roomPos;
-        int retries = 0;
-        for (int i = 0; i <= essentialRooms.Count() - 1; i++)
-        {
-            if (i == 0)
-            {
-                roomPos = new Vector3((boundsX * 10) + 10, floorPos, (boundsY / 2) * 10);
-                room = Instantiate(essentialRooms[i], roomPos, new Quaternion(Quaternion.identity.x, Quaternion.identity.y, Quaternion.identity.z, Quaternion.identity.w));
-                room.transform.Rotate(0f, Mathf.Abs(Random.Range(1, 5) * 90f), 0f);
-            }
-            else
-            {
-                int gridIndex = Mathf.RoundToInt(Random.Range(0, grid.Count));
-                roomPos = new Vector3(grid[gridIndex].x, floorPos, grid[gridIndex].y);
-                room = Instantiate(essentialRooms[i], roomPos, new Quaternion(Quaternion.identity.x, Quaternion.identity.y, Quaternion.identity.z, Quaternion.identity.w));
-                room.transform.Rotate(0f, Mathf.Abs(Random.Range(1, 5) * 90f), 0f);
-            }
-            //Gives the room several chances to generate. If it cannot find an adequate spot in 10 tries,
-            //assume there are no possible spots and break out of the loop.
-            if (CheckRoomFootprint(room) == false)
-            {
-                GameObject.Destroy(room);
-                i--;
-                retries++;
-                if (retries < 10)
-                {
-                    continue;
-                }
-            }
+        Vector3 fixedVector3 = new Vector3(Mathf.RoundToInt(position.x), Mathf.RoundToInt(position.y), Mathf.RoundToInt(position.z));
 
-            //Resest the retries for the next overlap scenario.
-            retries = 0;
-            grid.Remove(new Vector2(roomPos.x, roomPos.z));
-            rooms.Add(room.transform);
-            roomPositions.Add(FixVector3Floats(room.transform.position));
-            NetworkServer.Spawn(room);
-
-            foreach (Transform child in room.transform)
-            {
-                if (child.name.Contains("Footprint"))
-                {
-                    roomPositions.Add(FixVector3Floats(child.position));
-                }
-            }
-        }
+        return fixedVector3;
     }
 
-    //-------------------------------------------------------
-    //CORUTINES
-    //-------------------------------------------------------
-    private IEnumerator WaitForPlayers()
-    {
-        bool allPlayersReady = false;
-
-        while (!allPlayersReady)
-        {
-            Debug.Log(allPlayersReady);
-            for (int i = 0; i < NetworkServer.connections.Count(); i++)
-            {
-                allPlayersReady = true;
-                if (!NetworkServer.connections[i].isReady)
-                {
-                    allPlayersReady = false;
-                }
-                yield return null;
-            }
-        }
-        GenerateLevel();
-        StopCoroutine(WaitForPlayers());
-    }
 }
