@@ -20,7 +20,11 @@ public class PlayerMovementController : NetworkBehaviour
     private const float noClipConst = 0f;
 
     private float gravityValue = -15f;
-
+    public float GravityValue 
+    { 
+        get => gravityValue;
+        set => gravityValue = value;
+    }
     private Quaternion playerRotation;
     private float cameraTilt;
     private float cameraPan;
@@ -53,7 +57,6 @@ public class PlayerMovementController : NetworkBehaviour
         {
             return;            
         }
-        CheckNoClip();
         MoveCamera();
         Move();
         Jump();
@@ -136,18 +139,6 @@ public class PlayerMovementController : NetworkBehaviour
             return true;
         }
             return false;
-    }
-
-    private void CheckNoClip()
-    {
-        if (noClip.NoClipActive)
-        {
-            gravityValue = noClipConst;
-        }
-        else
-        {
-            gravityValue = gravityConst;
-        }
     }
 }
 

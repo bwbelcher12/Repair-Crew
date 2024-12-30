@@ -20,6 +20,6 @@ public class HostLobby : MonoBehaviour
             yield return null;
         }
 
-        networkManagerObject.GetComponent<SteamLobby2>().HostLobby();
+        networkManagerObject.GetComponent<SteamLobby>().HostLobby();
     }
 }

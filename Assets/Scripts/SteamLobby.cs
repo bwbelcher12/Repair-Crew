@@ -1,30 +1,27 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using Mirror;
 using Steamworks;
 using System.Collections;
-using System.Collections.Generic;
 
 /*
  * CREATED USING THIS TUTORIAL: https://youtu.be/QlbBC07dqnE?si=pn4OVR7YhtQzmFiZ  
  */
 public class SteamLobby : MonoBehaviour
 {
-    [SerializeField] private GameObject menuUI;
-    [SerializeField] private GameObject disconnectUI;
-    [SerializeField] private Camera menuCamera;
-    [SerializeField] private GameObject levelGenerator;
+    [SerializeField] GameObject networkManagerObject;
     private NetworkManager networkManager;
     private CSteamID currentLobbyID = new CSteamID();
 
     private const string HostAddressKey = "HostAdress";
-
+    private const string LobbyScene = "LobbyScene";
     protected Callback<LobbyCreated_t> lobbyCreated;
     protected Callback<GameLobbyJoinRequested_t> gameLobbyJoinRequested;
     protected Callback<LobbyEnter_t> lobbyEntered;
 
     private void Start()
     {
-        networkManager = GetComponent<NetworkManager>();
+        networkManager = networkManagerObject.GetComponent<NetworkManager>();
 
         if (!SteamManager.Initialized)
         {
@@ -38,21 +35,13 @@ public class SteamLobby : MonoBehaviour
 
     public void HostLobby()
     {
-        menuUI.SetActive(false);
-        disconnectUI.SetActive(true);
-        menuCamera.enabled = false;
-        menuCamera.GetComponent<AudioListener>().enabled = false;
-
         SteamMatchmaking.CreateLobby(ELobbyType.k_ELobbyTypeFriendsOnly, networkManager.maxConnections);
-        StartCoroutine(GenerateWorldAfterClientReady());
     }
 
     private void OnLobbyCreated(LobbyCreated_t callback)
     {
         if (callback.m_eResult != EResult.k_EResultOK)
         {
-            menuUI.SetActive(true);
-            disconnectUI.SetActive(false);
             return;
         }
 
@@ -63,6 +52,7 @@ public class SteamLobby : MonoBehaviour
 
     private void OnGameLobbyJoinRequested(GameLobbyJoinRequested_t callback)
     {
+        StartLoadCoroutine(LobbyScene);
         SteamMatchmaking.JoinLobby(callback.m_steamIDLobby);
     }
 
@@ -80,46 +70,32 @@ public class SteamLobby : MonoBehaviour
 
         networkManager.networkAddress = hostAdress;
         networkManager.StartClient();
-
-        menuUI.SetActive(false);
-        disconnectUI.SetActive(true);
-        menuCamera.enabled = false;
-        menuCamera.GetComponent<AudioListener>().enabled = false;
-        StartCoroutine(DeleteDoorsAfterClientReady());
     }
 
-    IEnumerator GenerateWorldAfterClientReady()
-    {
-        while (!NetworkClient.ready)
-        {
-            yield return null;
-        }
-
-        NetworkConnectionToClient conn = new NetworkConnectionToClient(NetworkClient.connection.connectionId, clientAddress: "localhost");
-        levelGenerator.SetActive(true);
-        levelGenerator.GetComponent<LevelGenerator2>().GenerateLevel();
-    }
-
-    IEnumerator DeleteDoorsAfterClientReady()
-    {
-        while (!NetworkClient.ready)
-        {
-            yield return null;
-        }
-        levelGenerator.GetComponent<LevelGenerator2>().CmdDestroyExtraWalls();
-    }
 
 
     public void ExitLobby()
     {
-        levelGenerator.GetComponent<LevelGenerator2>().ClearLevel();
-        menuUI.SetActive(true);
-        menuCamera.enabled = true;
-        disconnectUI.SetActive(false);
         SteamMatchmaking.LeaveLobby(currentLobbyID);
         currentLobbyID = new CSteamID();
-        networkManager.StopHost();
 
+        networkManager.StopHost();
     }
 
+
+    public void StartLoadCoroutine(string sceneName)
+    {
+        StartCoroutine(LoadSceneAsync(sceneName));
+    }
+
+    private IEnumerator LoadSceneAsync(string sceneName)
+    {
+        AsyncOperation loadScene = SceneManager.LoadSceneAsync(sceneName);
+
+        while (!loadScene.isDone)
+        {
+            yield return null;
+        }
+
+    }
 }
