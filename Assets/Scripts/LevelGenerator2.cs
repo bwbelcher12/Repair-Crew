@@ -225,17 +225,18 @@ public class LevelGenerator2 : NetworkBehaviour
             wallsInRoom = walls.childCount;
 
             //Identify overlapping walls and separate them from non-overlapping walls
-            foreach(Transform wall in walls)
+            foreach (Transform wall in walls)
             {
-                if(!allWallPositions.Contains(FixVector3Floats(wall.transform.position)))
+                if (!allWallPositions.Contains(FixVector3Floats(wall.transform.position)))
                 {
                     allWallPositions.Add(FixVector3Floats(wall.transform.position));
                     wallList.Add(wall);
                 }
+                else
+                {
+                    RpcAddToOverlappingWalls(wall.transform.GetSiblingIndex(), room.gameObject);
+                }
             }
-
-            
-
             //Ensure at least one door generates per room, with additional doors generating if the random range hits.
             while (wallList.Count > 0)
             {
@@ -245,12 +246,43 @@ public class LevelGenerator2 : NetworkBehaviour
                     wallList.RemoveAt(0);
                     continue;
                 }
-                if (wallList.Count == 1 || Random.Range(1, 100) >= 70)
+
+                //Another special case for the starting room to make sure at least one door (and often two doors) generate.
+                //This can happen because the above statement has a chance of making the starter room miss the wallList.Count == 1 conditon later.
+                if (room.transform.name == "PlayerStartingRoom(Clone)" && wallList.Count == 2)
                 {
                     localPosition = new Vector3(wallList[0].transform.position.x, floorPos, wallList[0].transform.position.z);
                     localRotation = wallList[0].transform.rotation;
 
-                    Debug.Log(NetworkClient.ready);
+                    RpcAddToOverlappingWalls(wallList[0].transform.GetSiblingIndex(), room.gameObject);
+                    wallList.RemoveAt(0);
+
+                    GameObject newDoor = GameObject.Instantiate(doorPrefab, localPosition, localRotation);
+                    newDoor.transform.Rotate(new Vector3(0f, -90f, 0f));
+
+                    NetworkServer.Spawn(newDoor);
+
+                    foreach (Transform child in newDoor.transform)
+                    {
+                        if (child.name == "Connection Point")
+                        {
+                            //connectionPoints.Add(child);
+                            if (grid.Contains(new Vector2(Mathf.RoundToInt(child.transform.position.x), Mathf.RoundToInt(child.transform.position.z))))
+                            {
+                                connectionPoints.Add(child);
+                                connectionPointPositions.Add(FixVector3Floats(child.position));
+                                grid.Remove(new Vector2(Mathf.RoundToInt(child.transform.position.x), Mathf.RoundToInt(child.transform.position.z)));
+                            }
+                        }
+                    }
+                    continue;
+                }
+
+                //For all other rooms, ensure at least one door is generated, with each other wall having a 30% chance to generate a door.
+                if (wallList.Count == 1 || Random.Range(1, 100) >= 70)
+                {
+                    localPosition = new Vector3(wallList[0].transform.position.x, floorPos, wallList[0].transform.position.z);
+                    localRotation = wallList[0].transform.rotation;
 
                     RpcAddToOverlappingWalls(wallList[0].transform.GetSiblingIndex(), room.gameObject);
                     wallList.RemoveAt(0);
@@ -468,10 +500,8 @@ public class LevelGenerator2 : NetworkBehaviour
 
         if(closestPoint == connectionpoint2)
         {
-            //Debug.DrawLine(connectionpoint1, closestPoint, Color.red, 999);
             return;
         }
-        //Debug.DrawLine(connectionpoint1, closestPoint, Color.red, 999);
 
         if(hallwayPositions.Contains(closestPoint) == false)
         {
@@ -708,10 +738,6 @@ public class LevelGenerator2 : NetworkBehaviour
         }
     }
 
-
-
-
-
     //-------------------------------------------------------
     //CORUTINES
     //-------------------------------------------------------
@@ -735,7 +761,4 @@ public class LevelGenerator2 : NetworkBehaviour
         GenerateLevel();
         StopCoroutine(WaitForPlayers());
     }
-
-    
-
 }
