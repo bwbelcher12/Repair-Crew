@@ -34,9 +34,6 @@ public class LevelGenerator2 : NetworkBehaviour
     [SyncVar]
     [SerializeField] List<Transform> rooms = new List<Transform>();
 
-    private const string NetworkManagerName = "NetworkManager";
-    private NetworkManager networkManager = new NetworkManager();
-
     //Lists for determining wall placement
     //*****************************************************************************************
     List<int> wallPositions = new List<int> { 0, 0, 0, 0 };
@@ -62,67 +59,26 @@ public class LevelGenerator2 : NetworkBehaviour
     List<int> capHallWest = new List<int> { 0, 1, 0, 0 };
     //*****************************************************************************************
 
-    public int roomCount;
-    public int boundsX, boundsY;
-
-    public bool roomsPlaced;
-
-    public void AssignAuthority(NetworkConnectionToClient client)
-    {
-        transform.GetComponent<NetworkIdentity>().RemoveClientAuthority();
-        transform.GetComponent<NetworkIdentity>().AssignClientAuthority(client);
-
-    }
+    [SerializeField] private int roomCount;
+    [SerializeField] private int boundsX, boundsY;
 
     private void Start()
     {
-        networkManager = GameObject.Find(NetworkManagerName).GetComponent<NetworkManager>();
         if(isServer)
         {
             StartCoroutine(WaitForPlayers());
         }
     }
 
-    private IEnumerator WaitForPlayers()
-    {
-        bool allPlayersReady = false;
-
-        while(!allPlayersReady)
-        {
-            Debug.Log(allPlayersReady);
-            for (int i = 0; i < NetworkServer.connections.Count(); i++)
-            {
-                allPlayersReady = true;
-                if(!NetworkServer.connections[i].isReady)
-                {
-                    allPlayersReady = false;
-                }
-                yield return null;
-            }
-        }
-        GenerateLevel();
-        StopCoroutine(WaitForPlayers());
-    }
-
     private void Update()
     {
+        //MOVE THIS FUNCTION CALL TO THE END OF LEVEL GENERATION
         if(Input.GetKeyDown(KeyCode.O))
         {
             CmdDestroyExtraWalls();
         }
     }
 
-    [Server]
-    public void GenerateLevel()
-    { 
-        roomsPlaced = false;
-
-        grid = CreateGrid();
-
-        GenerateFloor(0);
-    }
-
-    
     private void OnDrawGizmos()
     {
         if (!doDrawGrizoms) { return; }
@@ -141,7 +97,53 @@ public class LevelGenerator2 : NetworkBehaviour
         }
     }
 
-    
+    //-------------------------------------------------------
+    //SERVER FUNCTIONS
+    //-------------------------------------------------------
+
+    [Server]
+    public void GenerateLevel()
+    {
+        grid = CreateGrid();
+        GenerateFloor(0);
+    }
+
+    [Server]
+    public void ClearLevel()
+    {
+        connectionPoints.Clear();
+        connectionPointPositions.Clear();
+        rooms.Clear();
+        roomPositions.Clear();
+        grid.Clear();
+        hallwayPositions.Clear();
+        tempNeighborSpaces.Clear();
+        doorWalls.Clear();
+        overlappingWalls.Clear();
+    }
+
+    //-------------------------------------------------------
+    //CLIENTRPC FUNCTIONS
+    //-------------------------------------------------------
+
+    [ClientRpc]
+    public void CmdDestroyExtraWalls()
+    {
+        foreach (Transform room in rooms)
+        {
+            room.GetComponent<SyncObjectsToDestroy>().IsEnabled = false;
+            //7Destroy(wall.gameObject);
+        }
+
+    }
+
+    [ClientRpc]
+    private void RpcAddToOverlappingWalls(int wallIndex, GameObject room)
+    {
+        room.GetComponent<SyncObjectsToDestroy>().badWallIndicies.Add(wallIndex);
+        Debug.Log(room.GetComponent<SyncObjectsToDestroy>().badWallIndicies.Count);
+        //overlappingWalls.Add(wall);
+    }
 
     /*
      *Creates one layer of the map by iteratively instantiating new rooms. Rooms are place on the grid
@@ -197,8 +199,6 @@ public class LevelGenerator2 : NetworkBehaviour
             NetworkServer.Spawn(rooms[j].gameObject);
             j++;
         }
-
-        roomsPlaced = true;
 
         AddGridPadding(1);
 
@@ -303,158 +303,6 @@ public class LevelGenerator2 : NetworkBehaviour
         {
             InstatiateHall(FixVector3Floats(position));
         }
-
-        //ClientReady(true);
-    }
-
-    void DrawLinks()
-    {
-        List<Transform> connectedRooms = new List<Transform>();
-        
-        List<Edge> connections = new List<Edge>();
-
-        //Draw links one room at a time
-        foreach (Transform room in rooms)
-        {
-            List<Transform> localConnectionPoints = new List<Transform>();
-
-            //Add all connection points in the current room to a list
-            foreach (Transform child in room.transform)
-            {
-                Transform connectionPoint = GetConnectionPoints(child);
-
-                if (connectionPoint)
-                {
-                    localConnectionPoints.Add(connectionPoint);
-                }
-            }
-
-            Debug.Log(localConnectionPoints.Count);
-
-            //
-            List<Transform> usedPoints = new List<Transform>();
-            foreach (Transform point in localConnectionPoints)
-            {
-                Edge shortestPath = new Edge(Vector3.negativeInfinity, Vector3.positiveInfinity);
-
-                foreach (Transform compPoint in connectionPoints)
-                {
-                    if (point.Equals(compPoint))
-                        continue;
-
-                    if (point.transform.parent.Equals(compPoint.transform.parent))
-                        continue;
-
-                    if (usedPoints.Contains(compPoint))
-                        continue;
-
-                    Edge edge = new Edge(point.transform.position, compPoint.transform.position);
-
-                    edge.Draw(.05f, Color.red);
-
-                    if (shortestPath.Length() > edge.Length())
-                    {
-                        shortestPath = edge;
-                    }
-
-                }
-                shortestPath.Draw(999f, Color.green);
-                connections.Add(shortestPath);
-
-            }
-        }
-        foreach(Edge edge in connections)
-        {
-            edge.Draw();
-        }
-    }
-
-    IEnumerator DrawConnections()
-    {
-        //Algoritiom from https://en.wikipedia.org/wiki/Bowyer%E2%80%93Watson_algorithm
-        List<Triangle> triangulation = new List<Triangle>(); //List to hold triangls
-        Triangle superTrianlge = new Triangle(new Vector3(boundsX * 30f, 0f, 0f), new Vector3(-boundsX * 20f, 0f, boundsY * 30f), new Vector3(-boundsX * 20f, 0f, -boundsY* 30f)); //Create a Super-triangle that is large enough to cotain all points
-        triangulation.Add(superTrianlge);
-
-        foreach(Transform point in connectionPoints.ToArray())
-        {
-            Debug.Log(triangulation.Count);
-            List<Triangle> badTriangles = new List<Triangle>();
-            foreach (Triangle tri in triangulation)
-            {
-                Circumcircle circle = CalculateCircumcirlce(tri);
-                Debug.Log(circle.ToString());
-                if(circle.ContainsPoint(point.position))
-                {
-                    badTriangles.Add(tri);
-                }
-            }
-            Debug.Log(badTriangles.Count + " bad tris");
-            List<Edge> polygon = new List<Edge>();
-            foreach(Triangle tri in badTriangles)
-            {
-                tri.Draw(.05f, Color.red);
-                Debug.Log(2);
-                Debug.Log(badTriangles.Count);
-                Debug.Log(tri.ToString());
-                foreach(Edge edge in tri.Edges())
-                { 
-                    foreach(Triangle triangle in badTriangles)
-                    {
-                        if (triangle.Equals(tri) && badTriangles.Count > 1)
-                            continue;
-                        else
-                        {
-                            foreach(Edge compEdge in triangle.Edges())
-                            {
-                                if (edge.Equals(compEdge))
-                                    continue;
-                                else if (polygon.Contains(edge))
-                                    continue;
-                                else
-                                    polygon.Add(edge);
-                            }
-                        }
-                    }
-                }
-                yield return null;
-            }
-            foreach(Triangle triangle in badTriangles)
-            {
-                Debug.Log(3 + " " + badTriangles.Count);
-                triangle.Draw(.05F, Color.yellow);
-                if(triangulation.Contains(triangle))
-                {
-                    triangulation.Remove(triangle);
-                }
-                yield return null;
-            }
-            Debug.Log(polygon.Count);
-            foreach(Edge edge in polygon)
-            {
-                Triangle newTri = new Triangle(point.position, edge.Point1, edge.Point2);
-                triangulation.Add(newTri);
-                newTri.Draw(.05f, Color.magenta);
-                yield return null;
-                //newTri.Draw();
-            }
-            yield return null;
-        }
-        foreach(Triangle triangle in triangulation.ToArray())
-        {
-            foreach(Vector3 vertex in triangle.Vertices())
-            {
-                foreach(Vector3 superVertex in superTrianlge.Vertices())
-                {
-                    if (vertex.Equals(superVertex))
-                        triangulation.Remove(triangle);
-                }
-            }
-        }
-        foreach(Triangle triangle in triangulation)
-        {
-            triangle.Draw();
-        }
     }
 
     private Transform GetConnectionPoints(Transform parent)
@@ -485,179 +333,6 @@ public class LevelGenerator2 : NetworkBehaviour
             }
         }
         return null;
-    }
-
-    public struct Triangle
-    { 
-        public Triangle(Vector3 vertex1, Vector3 vertex2, Vector3 vertex3)
-        {
-            Vertex1 = vertex1;
-            Vertex2 = vertex2;
-            Vertex3 = vertex3;
-
-            Edge1 = new Edge(vertex1, vertex2);
-            Edge2 = new Edge(vertex2, vertex3);
-            Edge3 = new Edge(vertex3, vertex1);
-
-        }
-
-        public Vector3 Vertex1 { get; }
-        public Vector3 Vertex2 { get; }
-        public Vector3 Vertex3 { get; }
-        public Edge Edge1, Edge2, Edge3;
-
-        public override string ToString()
-        {
-            return new string (Vertex1 + ", " + Vertex2 + ", " + Vertex3);
-        }
-
-        public void Draw()
-        {
-            Debug.DrawLine(Vertex1, Vertex2, Color.green, 999f);
-            Debug.DrawLine(Vertex2, Vertex3, Color.green, 999f);
-            Debug.DrawLine(Vertex3, Vertex1, Color.green, 999f);
-
-        }
-
-        public void Draw(float duration, Color color)
-        {
-            Debug.DrawLine(Vertex1, Vertex2, color, duration);
-            Debug.DrawLine(Vertex2, Vertex3, color, duration);
-            Debug.DrawLine(Vertex3, Vertex1, color, duration);
-
-        }
-
-        public Edge Side1()
-        {
-            Edge edge = new Edge();
-
-            edge.Point1 = Vertex1;
-            edge.Point2 = Vertex2;
-
-            return edge;
-        }
-        public Edge Side2()
-        {
-            Edge edge = new Edge();
-
-            edge.Point1 = Vertex2;
-            edge.Point2 = Vertex3;
-
-            return edge;
-        }
-        public Edge Side3()
-        {
-            Edge edge = new Edge();
-
-            edge.Point1 = Vertex3;
-            edge.Point2 = Vertex1;
-
-            return edge;
-        }
-        public List<Edge> Edges()
-        {
-            List<Edge> edges = new List<Edge>();
-
-            edges.Add(Edge1);
-            edges.Add(Edge2);
-            edges.Add(Edge3);
-
-            return edges;
-        }
-
-        public List<Vector3> Vertices()
-        {
-            List<Vector3> vertices = new List<Vector3>();
-
-            vertices.Add(Vertex1);
-            vertices.Add(Vertex2);
-            vertices.Add(Vertex3);
-
-            return vertices;
-        }
-    }
-
-    public struct Circumcircle
-    {
-        public Circumcircle(Vector3 center, float radius)
-        {
-            Center = center;
-            Radius = radius;
-        }
-
-        public Vector3 Center { get; set; }
-        public float Radius { get; set; }
-
-        public bool ContainsPoint(Vector3 point)
-        {
-            if (Vector3.Distance(point, Center) <= Radius)
-                return true;
-            else
-                return false;
-        }
-
-        public override string ToString()
-        {
-            return "Circle of radius " + Radius + " @ " + Center;
-        }
-    }
-
-    private Circumcircle CalculateCircumcirlce(Triangle triangle)
-    {
-        Circumcircle circle = new Circumcircle();
-        float radius;
-        Vector3 center;
-        float denominator = triangle.Edge1.Length() * triangle.Edge2.Length() * triangle.Edge3.Length();
-        //Debug.Log(denominator);
-
-        float component1 = triangle.Edge1.Length() + triangle.Edge2.Length() + triangle.Edge3.Length();
-        //Debug.Log(component1);
-        float component2 = -triangle.Edge1.Length() + triangle.Edge2.Length() + triangle.Edge3.Length();
-        //Debug.Log(component2);
-        float component3 = triangle.Edge1.Length() - triangle.Edge2.Length() + triangle.Edge3.Length();
-        //Debug.Log(component3);
-        float component4 = triangle.Edge1.Length() + triangle.Edge2.Length() - triangle.Edge3.Length();
-        //Debug.Log(component4);
-
-        float numerator = Mathf.Sqrt(component1 * component2 * component3 * component4);
-        //Debug.Log(numerator);
-        
-        center = new Vector3((triangle.Vertex1.x + triangle.Vertex2.x + triangle.Vertex3.x) / 3, 0f, (triangle.Vertex1.z + triangle.Vertex2.z + triangle.Vertex3.z) / 3);
-
-        radius = denominator / numerator;
-
-        circle.Radius = radius;
-        circle.Center = center;
-
-
-        return circle;
-    }
-
-    public struct Edge
-    {
-        public Edge (Vector3 point1, Vector3 point2)
-        {
-            Point1 = point1;
-            Point2 = point2;
-        }
-        
-        public Vector3 Point1 { get; set; }
-        public Vector3 Point2 { get; set; }
-
-        public float Length()
-        {
-            return Mathf.Abs(Vector3.Distance(Point1, Point2));
-        }
-
-        public void Draw()
-        {
-            Debug.DrawLine(Point1, Point2, Color.red, 999f);
-        }
-
-        public void Draw(float duration, Color color)
-        {
-            Debug.DrawLine(Point1, Point2, color, duration);
-        }
     }
 
     //Fills the list used to select room generation locations from
@@ -1036,36 +711,31 @@ public class LevelGenerator2 : NetworkBehaviour
 
 
 
-    [ClientRpc]
-    public void CmdDestroyExtraWalls()
+
+    //-------------------------------------------------------
+    //CORUTINES
+    //-------------------------------------------------------
+    private IEnumerator WaitForPlayers()
     {
-        foreach (Transform room in rooms)
+        bool allPlayersReady = false;
+
+        while (!allPlayersReady)
         {
-            room.GetComponent<SyncObjectsToDestroy>().IsEnabled = false;
-            //7Destroy(wall.gameObject);
+            Debug.Log(allPlayersReady);
+            for (int i = 0; i < NetworkServer.connections.Count(); i++)
+            {
+                allPlayersReady = true;
+                if (!NetworkServer.connections[i].isReady)
+                {
+                    allPlayersReady = false;
+                }
+                yield return null;
+            }
         }
-
+        GenerateLevel();
+        StopCoroutine(WaitForPlayers());
     }
 
-    [ClientRpc]
-    private void RpcAddToOverlappingWalls(int wallIndex, GameObject room)
-    {
-        room.GetComponent<SyncObjectsToDestroy>().badWallIndicies.Add(wallIndex);
-        Debug.Log(room.GetComponent<SyncObjectsToDestroy>().badWallIndicies.Count);
-        //overlappingWalls.Add(wall);
-    }
+    
 
-    [Server]
-    public void ClearLevel()
-    {
-        connectionPoints.Clear();
-        connectionPointPositions.Clear();
-        rooms.Clear();
-        roomPositions.Clear();
-        grid.Clear();
-        hallwayPositions.Clear();
-        tempNeighborSpaces.Clear();
-        doorWalls.Clear();
-        overlappingWalls.Clear();
-    }
 }
