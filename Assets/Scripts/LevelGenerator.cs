@@ -110,7 +110,6 @@ public class LevelGenerator : NetworkBehaviour
 
         while (!allPlayersReady)
         {
-            Debug.Log(allPlayersReady);
             for (int i = 0; i < NetworkServer.connections.Count(); i++)
             {
                 allPlayersReady = true;
@@ -163,7 +162,6 @@ public class LevelGenerator : NetworkBehaviour
     private void RpcAddToOverlappingWalls(int wallIndex, GameObject room)
     {
         room.GetComponent<SyncObjectsToDestroy>().badWallIndicies.Add(wallIndex);
-        Debug.Log(room.GetComponent<SyncObjectsToDestroy>().badWallIndicies.Count);
     }
 
     [ClientRpc]

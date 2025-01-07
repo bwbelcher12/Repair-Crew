@@ -1,7 +1,8 @@
 using UnityEngine;
 using UnityEngine.InputSystem;
+using Mirror;
 
-public class FlashLight : MonoBehaviour
+public class FlashLight : NetworkBehaviour
 {
     [SerializeField] InputActionAsset inputActions;
 
@@ -9,14 +10,34 @@ public class FlashLight : MonoBehaviour
     [SerializeField] Camera playerCam;
 
 
-    // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
-        inputActions.FindActionMap("Player").FindAction("ToggleFlashlight").performed += ToggleFlashLight;
+        if (!isLocalPlayer)
+            return;
+
+        inputActions.FindActionMap("Player").FindAction("ToggleFlashlight").performed += CmdToggleFlashlight;
     }
 
+    [Command]
+    private void CmdToggleFlashlight(InputAction.CallbackContext context)
+    {
+        if(isServer)
+        {
+            RpcToggleFlashlight();
+            return;
+        }
+        if (flashlight.enabled == true)
+        {
+            flashlight.enabled = false;
+        }
+        else
+        {
+            flashlight.enabled = true;
+        }
+    }
 
-    private void ToggleFlashLight(InputAction.CallbackContext context)
+    [ClientRpc]
+    private void RpcToggleFlashlight()
     {
         if (flashlight.enabled == true)
         {
@@ -31,5 +52,10 @@ public class FlashLight : MonoBehaviour
     private void Update()
     {
         flashlight.transform.rotation = playerCam.transform.rotation; 
+    }
+
+    private void OnDestroy()
+    {
+        inputActions.FindActionMap("Player").FindAction("ToggleFlashlight").performed -= CmdToggleFlashlight;
     }
 }

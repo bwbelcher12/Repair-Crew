@@ -23,7 +23,6 @@ public class PlayerTeleporter : NetworkBehaviour
         {
             yield return null;
         }
-        Debug.Log("start room found");
         startRoom = GameObject.Find(StartRoomName);
         AddStartPositions();
         StopCoroutine(LookForStartRoom());

@@ -15,10 +15,10 @@ EditorBuildSettings:
     path: Assets/Scenes/MainScene.unity
     guid: 9fc0d4010bbf28b4594072e72b8655ab
   - enabled: 0
-    path: Assets/Scenes/MirrorWithSteamTest.unity
+    path: Assets/Scenes/Test Scenes/MirrorWithSteamTest.unity
     guid: 9cbab1f967f1ec941839dbb8f37e3260
   - enabled: 0
-    path: Assets/Scenes/MultiplayerTest.unity
+    path: Assets/Scenes/Test Scenes/MultiplayerTest.unity
     guid: 6faa611137207d04ebee9dd846e5fdb4
   m_configObjects:
     com.unity.input.settings: {fileID: 11400000, guid: 6aa9bcabb759d3d459507e9a2546da45, type: 2}

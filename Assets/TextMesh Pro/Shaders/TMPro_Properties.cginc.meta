@@ -7,3 +7,10 @@ ShaderImporter:
   userData: 
   assetBundleName: 
   assetBundleVariant: 
+AssetOrigin:
+  serializedVersion: 1
+  productId: 217387
+  packageName: Master FPS Counter
+  packageVersion: 
+  assetPath: Assets/TextMesh Pro/Shaders/TMPro_Properties.cginc
+  uploadId: 0
