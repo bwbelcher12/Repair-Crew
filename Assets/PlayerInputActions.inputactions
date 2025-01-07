@@ -18,7 +18,7 @@
                     "name": "Jump",
                     "type": "Button",
                     "id": "b4751f1a-25e2-4907-acf3-da1b68cf3f8f",
-                    "expectedControlType": "Button",
+                    "expectedControlType": "",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": false
@@ -27,10 +27,19 @@
                     "name": "FirstPersonCameraMove",
                     "type": "Value",
                     "id": "a3cbecd6-d5f3-422d-a4b7-e05de8be7dff",
-                    "expectedControlType": "",
+                    "expectedControlType": "Axis",
                     "processors": "",
                     "interactions": "",
                     "initialStateCheck": true
+                },
+                {
+                    "name": "ToggleFlashlight",
+                    "type": "Button",
+                    "id": "a06e774f-9d6d-453a-a129-126e0102b868",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
                 }
             ],
             "bindings": [
@@ -154,6 +163,45 @@
                     "action": "FirstPersonCameraMove",
                     "isComposite": false,
                     "isPartOfComposite": true
+                },
+                {
+                    "name": "",
+                    "id": "adccbaf2-a8cf-4414-98ff-136181979302",
+                    "path": "<Keyboard>/f",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "ToggleFlashlight",
+                    "isComposite": false,
+                    "isPartOfComposite": false
+                }
+            ]
+        },
+        {
+            "name": "Menus",
+            "id": "66260007-4335-4e64-a561-19f5648bbf9a",
+            "actions": [
+                {
+                    "name": "OpenEscapeMenu",
+                    "type": "Button",
+                    "id": "8ddb0193-a67d-461e-88bc-215d9c00ba08",
+                    "expectedControlType": "",
+                    "processors": "",
+                    "interactions": "",
+                    "initialStateCheck": false
+                }
+            ],
+            "bindings": [
+                {
+                    "name": "",
+                    "id": "63880692-0309-4650-a962-201ddbd9ec9d",
+                    "path": "<Keyboard>/escape",
+                    "interactions": "",
+                    "processors": "",
+                    "groups": "",
+                    "action": "OpenEscapeMenu",
+                    "isComposite": false,
+                    "isPartOfComposite": false
                 }
             ]
         }

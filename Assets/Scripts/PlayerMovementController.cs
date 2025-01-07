@@ -1,8 +1,11 @@
 using Mirror;
 using UnityEngine;
+using UnityEngine.InputSystem;
 
 public class PlayerMovementController : NetworkBehaviour
 {
+    [SerializeField] InputActionAsset inputActions;
+
     public float sensitivity = 1f;
     public float playerSpeed = .2f;
 
@@ -25,6 +28,14 @@ public class PlayerMovementController : NetworkBehaviour
         get => gravityValue;
         set => gravityValue = value;
     }
+
+    private bool movementDisabled;
+    public bool MovementDisabled
+    {
+        get => movementDisabled;
+        set => movementDisabled = value;
+    }
+
     private Quaternion playerRotation;
     private float cameraTilt;
     private float cameraPan;
@@ -35,6 +46,8 @@ public class PlayerMovementController : NetworkBehaviour
     private Collider hitCollider;
     private RaycastHit hit;
 
+
+
     public Camera playerCamera;
 
     private void Start()
@@ -44,7 +57,9 @@ public class PlayerMovementController : NetworkBehaviour
         controller = transform.GetComponent<CharacterController>();
         networkTransform = transform.GetComponent<NetworkTransformReliable>();
         noClip = transform.GetComponent<NoClip>();
-        if(networkTransform.isOwned)
+        inputActions.FindActionMap("Menus").FindAction("OpenEscapeMenu").performed += DisableMovement;
+
+        if (networkTransform.isOwned)
         {
             playerCamera.enabled = enabled;
         }
@@ -57,10 +72,17 @@ public class PlayerMovementController : NetworkBehaviour
         {
             return;            
         }
-        MoveCamera();
-        Move();
-        Jump();
         
+        //Disable responses to input if the escape menu is open. 
+        if (!movementDisabled)
+        {
+            MoveCamera();
+            Move();
+            Jump();
+        }
+        
+        //Prevent the player from hovering if they open the escape menu.
+        ApplyGravity();
     }
 
     private void MoveCamera()
@@ -111,7 +133,6 @@ public class PlayerMovementController : NetworkBehaviour
         {
             playerVelocity.y = 0f;
         }
-        playerVelocity.y += gravityValue * Time.deltaTime;
     }
 
     private void Jump()
@@ -131,6 +152,11 @@ public class PlayerMovementController : NetworkBehaviour
         return new Vector2(fX, fY);
     }
 
+    private void ApplyGravity()
+    {
+        playerVelocity.y += gravityValue * Time.deltaTime;
+    }
+
     private bool IsGrounded()
     {
         hitDetect = Physics.BoxCast(controller.transform.position, transform.localScale * 0.5f, Vector3.down, out hit, transform.rotation, controller.transform.lossyScale.y * .62f);
@@ -139,6 +165,18 @@ public class PlayerMovementController : NetworkBehaviour
             return true;
         }
             return false;
+    }
+    
+    private void DisableMovement(InputAction.CallbackContext context)
+    {
+        if(!movementDisabled)
+        {
+            movementDisabled = true;
+        }
+        else
+        {
+            movementDisabled = false;
+        }
     }
 }
 
