@@ -62,6 +62,15 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""processors"": """",
                     ""interactions"": """",
                     ""initialStateCheck"": false
+                },
+                {
+                    ""name"": ""Interact"",
+                    ""type"": ""Button"",
+                    ""id"": ""1356198b-489a-43a2-8d5c-a8ee1872b4dc"",
+                    ""expectedControlType"": """",
+                    ""processors"": """",
+                    ""interactions"": """",
+                    ""initialStateCheck"": false
                 }
             ],
             ""bindings"": [
@@ -196,6 +205,17 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
                     ""action"": ""ToggleFlashlight"",
                     ""isComposite"": false,
                     ""isPartOfComposite"": false
+                },
+                {
+                    ""name"": """",
+                    ""id"": ""480cbbb4-55d3-4e5f-bb6e-f187a2a04f4a"",
+                    ""path"": ""<Keyboard>/e"",
+                    ""interactions"": """",
+                    ""processors"": """",
+                    ""groups"": """",
+                    ""action"": ""Interact"",
+                    ""isComposite"": false,
+                    ""isPartOfComposite"": false
                 }
             ]
         },
@@ -248,6 +268,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         m_Player_Jump = m_Player.FindAction("Jump", throwIfNotFound: true);
         m_Player_FirstPersonCameraMove = m_Player.FindAction("FirstPersonCameraMove", throwIfNotFound: true);
         m_Player_ToggleFlashlight = m_Player.FindAction("ToggleFlashlight", throwIfNotFound: true);
+        m_Player_Interact = m_Player.FindAction("Interact", throwIfNotFound: true);
         // Menus
         m_Menus = asset.FindActionMap("Menus", throwIfNotFound: true);
         m_Menus_OpenEscapeMenu = m_Menus.FindAction("OpenEscapeMenu", throwIfNotFound: true);
@@ -322,6 +343,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
     private readonly InputAction m_Player_Jump;
     private readonly InputAction m_Player_FirstPersonCameraMove;
     private readonly InputAction m_Player_ToggleFlashlight;
+    private readonly InputAction m_Player_Interact;
     public struct PlayerActions
     {
         private @PlayerInputActions m_Wrapper;
@@ -330,6 +352,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         public InputAction @Jump => m_Wrapper.m_Player_Jump;
         public InputAction @FirstPersonCameraMove => m_Wrapper.m_Player_FirstPersonCameraMove;
         public InputAction @ToggleFlashlight => m_Wrapper.m_Player_ToggleFlashlight;
+        public InputAction @Interact => m_Wrapper.m_Player_Interact;
         public InputActionMap Get() { return m_Wrapper.m_Player; }
         public void Enable() { Get().Enable(); }
         public void Disable() { Get().Disable(); }
@@ -351,6 +374,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             @ToggleFlashlight.started += instance.OnToggleFlashlight;
             @ToggleFlashlight.performed += instance.OnToggleFlashlight;
             @ToggleFlashlight.canceled += instance.OnToggleFlashlight;
+            @Interact.started += instance.OnInteract;
+            @Interact.performed += instance.OnInteract;
+            @Interact.canceled += instance.OnInteract;
         }
 
         private void UnregisterCallbacks(IPlayerActions instance)
@@ -367,6 +393,9 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
             @ToggleFlashlight.started -= instance.OnToggleFlashlight;
             @ToggleFlashlight.performed -= instance.OnToggleFlashlight;
             @ToggleFlashlight.canceled -= instance.OnToggleFlashlight;
+            @Interact.started -= instance.OnInteract;
+            @Interact.performed -= instance.OnInteract;
+            @Interact.canceled -= instance.OnInteract;
         }
 
         public void RemoveCallbacks(IPlayerActions instance)
@@ -445,6 +474,7 @@ public partial class @PlayerInputActions: IInputActionCollection2, IDisposable
         void OnJump(InputAction.CallbackContext context);
         void OnFirstPersonCameraMove(InputAction.CallbackContext context);
         void OnToggleFlashlight(InputAction.CallbackContext context);
+        void OnInteract(InputAction.CallbackContext context);
     }
     public interface IMenusActions
     {

@@ -270,7 +270,7 @@ QualitySettings:
     name: Ultra
     pixelLightCount: 40
     shadows: 2
-    shadowResolution: 2
+    shadowResolution: 3
     shadowProjection: 1
     shadowCascades: 4
     shadowDistance: 150
@@ -319,4 +319,5 @@ QualitySettings:
     terrainMaxTrees: 50
     excludedTargetPlatforms: []
   m_TextureMipmapLimitGroupNames: []
-  m_PerPlatformDefaultQuality: {}
+  m_PerPlatformDefaultQuality:
+    Standalone: 5
