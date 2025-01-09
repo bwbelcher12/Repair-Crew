@@ -281,16 +281,20 @@ PrefabInstance:
       objectReference: {fileID: 0}
     - target: {fileID: 2490124358783255867, guid: 6b7a030c0d9c0a74dad9b5d5172133a6, type: 3}
       propertyPath: boundsX
-      value: 15
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 2490124358783255867, guid: 6b7a030c0d9c0a74dad9b5d5172133a6, type: 3}
       propertyPath: boundsY
-      value: 15
+      value: 10
       objectReference: {fileID: 0}
     - target: {fileID: 2490124358783255867, guid: 6b7a030c0d9c0a74dad9b5d5172133a6, type: 3}
       propertyPath: roomCount
-      value: 25
+      value: 12
       objectReference: {fileID: 0}
+    - target: {fileID: 2490124358783255867, guid: 6b7a030c0d9c0a74dad9b5d5172133a6, type: 3}
+      propertyPath: doorPrefab
+      value: 
+      objectReference: {fileID: 3138969376981787507, guid: 3933be88965324541b239540e9c157a1, type: 3}
     - target: {fileID: 2490124358783255867, guid: 6b7a030c0d9c0a74dad9b5d5172133a6, type: 3}
       propertyPath: doDrawGrizoms
       value: 0
