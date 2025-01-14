@@ -31,10 +31,10 @@ ModelImporter:
     extraUserProperties: []
     clipAnimations:
     - serializedVersion: 16
-      name: OpenClose
-      takeName: Scene
+      name: Armature|OpenClose.001
+      takeName: Armature|OpenClose.001
       internalID: -623603649343465320
-      firstFrame: 1
+      firstFrame: 0
       lastFrame: 6
       wrapMode: 0
       orientationOffsetY: 0

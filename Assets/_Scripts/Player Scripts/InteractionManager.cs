@@ -9,6 +9,7 @@ public class InteractionManager : NetworkBehaviour
     [SerializeField] Camera playerCam;
 
     RaycastHit hit;
+
     [SerializeField] InteractableObject currentInteractable;
 
     private void Start()
@@ -75,17 +76,16 @@ public class InteractionManager : NetworkBehaviour
             return;
         }
 
-        if (!currentInteractable) //Do nothing if there isn't a current interactable.
-            return;
-        
-        currentInteractable.Interact();
     }
 
     [ClientRpc]
     private void RpcCallInteraction()
     {
+        Debug.Log(isServer);
+
         if (!currentInteractable) //Do nothing if there isn't a current interactable.
             return;
+
 
         currentInteractable.Interact();
     }

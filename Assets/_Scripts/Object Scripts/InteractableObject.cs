@@ -8,6 +8,7 @@ public class InteractableObject : MonoBehaviour
 
     public void Interact()
     {
+        Debug.Log("INTERACTING");
         onInteraction.Invoke();
     }
 }

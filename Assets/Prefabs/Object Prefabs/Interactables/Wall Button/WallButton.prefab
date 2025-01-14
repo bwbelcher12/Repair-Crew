@@ -52,10 +52,18 @@ PrefabInstance:
       propertyPath: m_TagString
       value: Interactable
       objectReference: {fileID: 0}
+    - target: {fileID: -4683669308469848369, guid: 3470b206ef282914da2ffdc865df2b43, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: abc00000000008020366621704325039, type: 2}
     - target: {fileID: 919132149155446097, guid: 3470b206ef282914da2ffdc865df2b43, type: 3}
       propertyPath: m_Name
       value: WallButton
       objectReference: {fileID: 0}
+    - target: {fileID: 5074512353664290214, guid: 3470b206ef282914da2ffdc865df2b43, type: 3}
+      propertyPath: 'm_Materials.Array.data[0]'
+      value: 
+      objectReference: {fileID: 2100000, guid: abc00000000008216144686847973245, type: 2}
     m_RemovedComponents: []
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
