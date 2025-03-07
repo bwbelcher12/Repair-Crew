@@ -1,4 +1,5 @@
 using UnityEngine;
+using UnityEngine.SceneManagement;
 using System.Collections;
 using System.Collections.Generic;
 using Mirror;
@@ -9,12 +10,28 @@ public class PlayerTeleporter : NetworkBehaviour
     private const string StartRoomName = "PlayerStartingRoom(Clone)";
     private GameObject startRoom;
 
+    private bool foundStartRoom;
+
     // Start is called once before the first execution of Update after the MonoBehaviour is created
     void Start()
     {
         StartCoroutine(LookForStartRoom());
+        foundStartRoom = false;
 
-        
+        if (SceneManager.GetActiveScene().name == "MainScene")
+        {
+            StartCoroutine(StartTP());
+        }
+
+        //SceneManager.sceneLoaded += OnSceneLoaded;
+    }
+
+    void OnSceneLoaded(Scene scene, LoadSceneMode mode)
+    {
+        if(scene.name == "MainScene")
+        {
+            StartCoroutine(StartTP());
+        }
     }
 
     IEnumerator LookForStartRoom()
@@ -23,6 +40,7 @@ public class PlayerTeleporter : NetworkBehaviour
         {
             yield return null;
         }
+        foundStartRoom = true;
         startRoom = GameObject.Find(StartRoomName);
         AddStartPositions();
         StopCoroutine(LookForStartRoom());
@@ -44,9 +62,7 @@ public class PlayerTeleporter : NetworkBehaviour
     {
         if(Input.GetKeyDown(KeyCode.T) && teleportPositions.Count > 0)
         {
-            transform.GetComponent<PlayerMovementController>().enabled = false;
-            TeleportTo(teleportPositions[Random.Range(0, teleportPositions.Count - 1)].transform.position);
-            StartCoroutine(ControllerEnableDelay());
+            StartCoroutine(StartTP());
         }
     }
 
@@ -60,5 +76,17 @@ public class PlayerTeleporter : NetworkBehaviour
         yield return new WaitForSeconds(.5f);
         transform.GetComponent<PlayerMovementController>().enabled = true;
         StopCoroutine(ControllerEnableDelay());
+    }
+
+    IEnumerator StartTP()
+    {
+        while(!foundStartRoom)
+        {
+            yield return null;
+        }
+
+        transform.GetComponent<PlayerMovementController>().enabled = false;
+        TeleportTo(teleportPositions[Random.Range(0, teleportPositions.Count - 1)].transform.position);
+        StartCoroutine(ControllerEnableDelay());
     }
 }

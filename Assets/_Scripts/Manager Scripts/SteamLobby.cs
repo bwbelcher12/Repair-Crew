@@ -82,6 +82,10 @@ public class SteamLobby : MonoBehaviour
         networkManager.StopHost();
     }
 
+    public void ToggleLobbyJoinable(bool value)
+    {
+        SteamMatchmaking.SetLobbyJoinable(currentLobbyID, value);
+    }
 
     public void StartLoadCoroutine(string sceneName)
     {
@@ -98,4 +102,5 @@ public class SteamLobby : MonoBehaviour
         }
 
     }
+
 }

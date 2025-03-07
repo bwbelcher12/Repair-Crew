@@ -76,7 +76,7 @@ public class LevelGenerator : NetworkBehaviour
         //MOVE THIS FUNCTION CALL TO THE END OF LEVEL GENERATION
         if(Input.GetKeyDown(KeyCode.O))
         {
-            CmdDestroyExtraWalls();
+            RPCDestroyExtraWalls();
         }
     }
 
@@ -133,6 +133,9 @@ public class LevelGenerator : NetworkBehaviour
     {
         grid = CreateGrid();
         GenerateFloor(0);
+
+        if(isServer)
+            RPCDestroyExtraWalls();
     }
 
     //This may be unnecessary now, but it is nice to have around.
@@ -165,7 +168,7 @@ public class LevelGenerator : NetworkBehaviour
     }
 
     [ClientRpc]
-    public void CmdDestroyExtraWalls()
+    public void RPCDestroyExtraWalls()
     {
         foreach (Transform room in rooms)
         {
