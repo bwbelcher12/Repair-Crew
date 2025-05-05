@@ -5,9 +5,8 @@ public class InteractableButton : InteractableObject
 {
     [SerializeField] MeshCollider buttonCollider;
 
-
-    void InteractCalled()
+    public void InteractCalled()
     {
-        Debug.Log("Interaction called from " + connectionToServer);
+        Debug.Log("Interaction called from " + connectionToClient);
     }
 }
