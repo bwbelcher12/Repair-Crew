@@ -18,7 +18,7 @@ public class GameFlowManager : NetworkBehaviour
     void Update()
     {
         if (Input.GetKeyDown(KeyCode.P) && isServer)
-            CMDStartLevel();
+            StartLevel();
 
         //Debug.Log(NetworkServer.isLoadingScene);
         //Debug.Log(NetworkClient.ready);

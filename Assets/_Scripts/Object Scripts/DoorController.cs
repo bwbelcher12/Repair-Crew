@@ -1,23 +1,11 @@
 using UnityEngine;
 using Mirror;
 
-public class DoorController : NetworkBehaviour
+public class DoorController : InteractableObject
 {
-    private bool doorOpen;
-
     [Command]
-    private void CmdToggleDoor()
+    public new void Interact()
     {
-        if(isServer)
-        {
-            RpcToggleDoor();
-            return;
-        }
-    }
-
-    [ClientRpc]
-    private void RpcToggleDoor()
-    {
-
+        Debug.Log("Hello connection " + connectionToClient);
     }
 }

@@ -495,7 +495,10 @@ PrefabInstance:
     - {fileID: 3990284640895351755, guid: 158af656530bcc649a1e16480588099f, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4272218627011944253, guid: 158af656530bcc649a1e16480588099f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 8194406088960743644}
   m_SourcePrefab: {fileID: 100100000, guid: 158af656530bcc649a1e16480588099f, type: 3}
 --- !u!4 &2021232433218479409 stripped
 Transform:
@@ -507,6 +510,42 @@ GameObject:
   m_CorrespondingSourceObject: {fileID: 3974812650926909875, guid: 158af656530bcc649a1e16480588099f, type: 3}
   m_PrefabInstance: {fileID: 1330451815993480167}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &2972180953319476442 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4272218627011944253, guid: 158af656530bcc649a1e16480588099f, type: 3}
+  m_PrefabInstance: {fileID: 1330451815993480167}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &8194406088960743644
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 2972180953319476442}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b34aad72bbb308b439264cc77f942abc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  onInteraction:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 3955183097344437150}
+        m_TargetAssemblyTypeName: Mirror.NetworkAnimator, Mirror.Components
+        m_MethodName: SetTrigger
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: Interact
+          m_BoolArgument: 0
+        m_CallState: 2
+  buttonCollider: {fileID: 0}
 --- !u!95 &7626235574782868519 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: -314299551438491712, guid: 158af656530bcc649a1e16480588099f, type: 3}
@@ -675,10 +714,10 @@ MonoBehaviour:
   m_Script: {fileID: 11500000, guid: 7f6f3bf89aa97405989c802ba270f815, type: 3}
   m_Name: 
   m_EditorClassIdentifier: 
-  syncDirection: 1
+  syncDirection: 0
   syncMode: 0
   syncInterval: 0
-  clientAuthority: 1
+  clientAuthority: 0
   animator: {fileID: 3807496827020084573}
 --- !u!114 &5554512522273356710
 MonoBehaviour:
@@ -870,13 +909,52 @@ PrefabInstance:
     - {fileID: 3990284640895351755, guid: 158af656530bcc649a1e16480588099f, type: 3}
     m_RemovedGameObjects: []
     m_AddedGameObjects: []
-    m_AddedComponents: []
+    m_AddedComponents:
+    - targetCorrespondingSourceObject: {fileID: 4272218627011944253, guid: 158af656530bcc649a1e16480588099f, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 4982387897893172614}
   m_SourcePrefab: {fileID: 100100000, guid: 158af656530bcc649a1e16480588099f, type: 3}
 --- !u!95 &1484731377803683455 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: -314299551438491712, guid: 158af656530bcc649a1e16480588099f, type: 3}
   m_PrefabInstance: {fileID: 8014632087077046719}
   m_PrefabAsset: {fileID: 0}
+--- !u!1 &6084443772076578434 stripped
+GameObject:
+  m_CorrespondingSourceObject: {fileID: 4272218627011944253, guid: 158af656530bcc649a1e16480588099f, type: 3}
+  m_PrefabInstance: {fileID: 8014632087077046719}
+  m_PrefabAsset: {fileID: 0}
+--- !u!114 &4982387897893172614
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 6084443772076578434}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: b34aad72bbb308b439264cc77f942abc, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  onInteraction:
+    m_PersistentCalls:
+      m_Calls:
+      - m_Target: {fileID: 3955183097344437150}
+        m_TargetAssemblyTypeName: Mirror.NetworkAnimator, Mirror.Components
+        m_MethodName: SetTrigger
+        m_Mode: 5
+        m_Arguments:
+          m_ObjectArgument: {fileID: 0}
+          m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
+          m_IntArgument: 0
+          m_FloatArgument: 0
+          m_StringArgument: Interact
+          m_BoolArgument: 0
+        m_CallState: 2
+  buttonCollider: {fileID: 0}
 --- !u!1 &6345833973475106828 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3974812650926909875, guid: 158af656530bcc649a1e16480588099f, type: 3}

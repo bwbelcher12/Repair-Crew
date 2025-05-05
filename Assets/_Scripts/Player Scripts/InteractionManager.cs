@@ -70,24 +70,24 @@ public class InteractionManager : NetworkBehaviour
     [Command]
     private void CmdCallInteraction(InputAction.CallbackContext context)
     {
-        if (isServer)
+        if (!isServer)
         {
-            RpcCallInteraction();
             return;
         }
-
+        RpcCallInteraction();
     }
 
     [ClientRpc]
     private void RpcCallInteraction()
     {
         Debug.Log(isServer);
+        Debug.Log(currentInteractable);
 
         if (!currentInteractable) //Do nothing if there isn't a current interactable.
             return;
 
 
-        currentInteractable.Interact();
+        currentInteractable.CmdInteract();
     }
 
     private void OnDestroy()
