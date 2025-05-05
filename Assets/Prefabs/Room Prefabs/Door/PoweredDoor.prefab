@@ -533,10 +533,10 @@ MonoBehaviour:
   onInteraction:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 3955183097344437150}
-        m_TargetAssemblyTypeName: Mirror.NetworkAnimator, Mirror.Components
-        m_MethodName: SetTrigger
-        m_Mode: 5
+      - m_Target: {fileID: 6713144299508063008}
+        m_TargetAssemblyTypeName: DoorController, Assembly-CSharp
+        m_MethodName: ToggleDoor
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -545,9 +545,9 @@ MonoBehaviour:
           m_StringArgument: Interact
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 8194406088960743644}
-        m_TargetAssemblyTypeName: InteractableButton, Assembly-CSharp
-        m_MethodName: InteractCalled
+      - m_Target: {fileID: 6713144299508063008}
+        m_TargetAssemblyTypeName: DoorController, Assembly-CSharp
+        m_MethodName: CmdPlaySound
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -557,7 +557,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  buttonCollider: {fileID: 0}
 --- !u!95 &7626235574782868519 stripped
 Animator:
   m_CorrespondingSourceObject: {fileID: -314299551438491712, guid: 158af656530bcc649a1e16480588099f, type: 3}
@@ -664,6 +663,9 @@ PrefabInstance:
     - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 18d92069d9e3753469ff01e81fa95963, type: 3}
       insertIndex: -1
       addedObject: {fileID: 7992235865498331332}
+    - targetCorrespondingSourceObject: {fileID: 919132149155446097, guid: 18d92069d9e3753469ff01e81fa95963, type: 3}
+      insertIndex: -1
+      addedObject: {fileID: 6713144299508063008}
   m_SourcePrefab: {fileID: 100100000, guid: 18d92069d9e3753469ff01e81fa95963, type: 3}
 --- !u!4 &2361026024258697673 stripped
 Transform:
@@ -785,6 +787,26 @@ MonoBehaviour:
   clip: {fileID: 8300000, guid: 9a62c9dd1337fb342bca40ea03055afc, type: 3}
   output: {fileID: 24300002, guid: 41eca8ff86d8769439fcc45aea9b89e6, type: 2}
   sourceObject: {fileID: 6345833973475106828}
+--- !u!114 &6713144299508063008
+MonoBehaviour:
+  m_ObjectHideFlags: 0
+  m_CorrespondingSourceObject: {fileID: 0}
+  m_PrefabInstance: {fileID: 0}
+  m_PrefabAsset: {fileID: 0}
+  m_GameObject: {fileID: 3138969376981787507}
+  m_Enabled: 1
+  m_EditorHideFlags: 0
+  m_Script: {fileID: 11500000, guid: 8ff9ea5586958224a8559fa2a18d31e1, type: 3}
+  m_Name: 
+  m_EditorClassIdentifier: 
+  syncDirection: 0
+  syncMode: 0
+  syncInterval: 0
+  onInteraction:
+    m_PersistentCalls:
+      m_Calls: []
+  n_animator: {fileID: 3955183097344437150}
+  doorSound: {fileID: 5554512522273356710}
 --- !u!1001 &8014632087077046719
 PrefabInstance:
   m_ObjectHideFlags: 0
@@ -954,10 +976,10 @@ MonoBehaviour:
   onInteraction:
     m_PersistentCalls:
       m_Calls:
-      - m_Target: {fileID: 3955183097344437150}
-        m_TargetAssemblyTypeName: Mirror.NetworkAnimator, Mirror.Components
-        m_MethodName: SetTrigger
-        m_Mode: 5
+      - m_Target: {fileID: 6713144299508063008}
+        m_TargetAssemblyTypeName: DoorController, Assembly-CSharp
+        m_MethodName: ToggleDoor
+        m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
           m_ObjectArgumentAssemblyTypeName: UnityEngine.Object, UnityEngine
@@ -966,9 +988,9 @@ MonoBehaviour:
           m_StringArgument: Interact
           m_BoolArgument: 0
         m_CallState: 2
-      - m_Target: {fileID: 4982387897893172614}
-        m_TargetAssemblyTypeName: InteractableButton, Assembly-CSharp
-        m_MethodName: InteractCalled
+      - m_Target: {fileID: 6713144299508063008}
+        m_TargetAssemblyTypeName: DoorController, Assembly-CSharp
+        m_MethodName: CmdPlaySound
         m_Mode: 1
         m_Arguments:
           m_ObjectArgument: {fileID: 0}
@@ -978,7 +1000,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  buttonCollider: {fileID: 0}
 --- !u!1 &6345833973475106828 stripped
 GameObject:
   m_CorrespondingSourceObject: {fileID: 3974812650926909875, guid: 158af656530bcc649a1e16480588099f, type: 3}
