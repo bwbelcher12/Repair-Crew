@@ -7,7 +7,11 @@ public class PlayerMovementController : NetworkBehaviour
     [SerializeField] InputActionAsset inputActions;
 
     public float sensitivity = 1f;
-    public float playerSpeed = .2f;
+    public float baseSpeed;
+    public float sprintSpeed;
+    public float walkSpeed;
+    public float breakingForce;
+    private float playerSpeed;
 
     private NetworkTransformReliable networkTransform;
 
@@ -41,6 +45,9 @@ public class PlayerMovementController : NetworkBehaviour
     private float cameraPan;
     private Vector3 cameraEulerAngles;
     private Vector2 inputForce;
+
+    private Vector2 forceVector;
+    private Vector2 previousVector;
     
     private bool hitDetect;
     private Collider hitCollider;
@@ -107,24 +114,44 @@ public class PlayerMovementController : NetworkBehaviour
 
         playerRotation = playerCamera.transform.rotation;
 
+        if (playerInputActions.Player.Walk.ReadValue<float>() == 1)
+        {
+            playerSpeed = walkSpeed;
+        }
+        else if (playerInputActions.Player.Sprint.ReadValue<float>() == 1)
+        {
+            playerSpeed = sprintSpeed;
+        }
+        else
+        {
+            playerSpeed = baseSpeed;
+        }
+
         if (inputForce.y > 0)
         {
-            Vector2 forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.y) * Time.deltaTime, playerRotation.eulerAngles.y);
+            forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.y) * Time.deltaTime, playerRotation.eulerAngles.y);
+            previousVector = forceVector;
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
         if (inputForce.y < 0)
         {
-            Vector2 forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.y) * Time.deltaTime, playerRotation.eulerAngles.y + 180f);
+            forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.y) * Time.deltaTime, playerRotation.eulerAngles.y + 180f);
+            previousVector = forceVector;
+
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
         if (inputForce.x > 0)
         {
-            Vector2 forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 90);
+            forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 90);
+            previousVector = forceVector;
+
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
         if (inputForce.x < 0)
         {
-            Vector2 forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 270);
+            forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 270);
+            previousVector = forceVector;
+
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
         controller.Move(new Vector3(0f, playerVelocity.y * Time.deltaTime, 0f));
@@ -132,6 +159,21 @@ public class PlayerMovementController : NetworkBehaviour
         if (playerVelocity.y < 0 && groundedPlayer)
         {
             playerVelocity.y = 0f;
+        }
+
+        Debug.Log(forceVector);
+
+        if(inputForce.y == 0 && inputForce.x == 0)
+        {
+            forceVector = previousVector * breakingForce;
+            previousVector = forceVector;
+
+            if(Mathf.Abs(previousVector.x) <= .0005f && Mathf.Abs(previousVector.y) <= .0005f)
+            {
+                previousVector = Vector2.zero;
+            }
+
+            controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
     }
 

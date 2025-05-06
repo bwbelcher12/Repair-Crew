@@ -80,9 +80,6 @@ public class InteractionManager : NetworkBehaviour
     [ClientRpc]
     private void RpcCallInteraction()
     {
-        Debug.Log(isServer);
-        Debug.Log(currentInteractable);
-
         if (!currentInteractable) //Do nothing if there isn't a current interactable.
             return;
 

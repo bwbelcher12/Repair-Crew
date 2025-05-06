@@ -1113,7 +1113,10 @@ MonoBehaviour:
   syncInterval: 0
   inputActions: {fileID: -944628639613478452, guid: 8ed4a1dab46756d42a27259f5e0abeda, type: 3}
   sensitivity: 0.3
-  playerSpeed: 4
+  baseSpeed: 3
+  sprintSpeed: 6
+  walkSpeed: 2
+  breakingForce: 1
   groundedPlayer: 0
   jumpHeight: 1
   playerCamera: {fileID: 862920422917820281}
