@@ -1116,7 +1116,7 @@ MonoBehaviour:
   baseSpeed: 3
   sprintSpeed: 6
   walkSpeed: 2
-  breakingForce: 1
+  breakingForce: 0.93
   groundedPlayer: 0
   jumpHeight: 1
   playerCamera: {fileID: 862920422917820281}

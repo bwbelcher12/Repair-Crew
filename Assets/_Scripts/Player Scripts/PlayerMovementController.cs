@@ -127,30 +127,47 @@ public class PlayerMovementController : NetworkBehaviour
             playerSpeed = baseSpeed;
         }
 
+        if (inputForce.y == 0 && inputForce.x == 0)
+        {
+            forceVector = previousVector * breakingForce;
+            previousVector = forceVector;
+
+            if (Mathf.Abs(previousVector.x) <= .0005f && Mathf.Abs(previousVector.y) <= .0005f)
+            {
+                previousVector = Vector2.zero;
+            }
+
+            controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
+        }
+        else
+        {
+            previousVector = Vector2.zero;
+        }
+
         if (inputForce.y > 0)
         {
             forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.y) * Time.deltaTime, playerRotation.eulerAngles.y);
-            previousVector = forceVector;
+            previousVector += forceVector;
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
         if (inputForce.y < 0)
         {
             forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.y) * Time.deltaTime, playerRotation.eulerAngles.y + 180f);
-            previousVector = forceVector;
+            previousVector += forceVector;
 
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
         if (inputForce.x > 0)
         {
             forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 90);
-            previousVector = forceVector;
+            previousVector += forceVector;
 
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
         if (inputForce.x < 0)
         {
             forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 270);
-            previousVector = forceVector;
+            previousVector += forceVector;
 
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
@@ -163,18 +180,7 @@ public class PlayerMovementController : NetworkBehaviour
 
         Debug.Log(forceVector);
 
-        if(inputForce.y == 0 && inputForce.x == 0)
-        {
-            forceVector = previousVector * breakingForce;
-            previousVector = forceVector;
-
-            if(Mathf.Abs(previousVector.x) <= .0005f && Mathf.Abs(previousVector.y) <= .0005f)
-            {
-                previousVector = Vector2.zero;
-            }
-
-            controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
-        }
+        
     }
 
     private void Jump()
