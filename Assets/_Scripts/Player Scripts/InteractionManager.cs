@@ -1,7 +1,7 @@
 using UnityEngine;
 using Mirror;
 using UnityEngine.InputSystem;
-
+using UnityEngine.UIElements;
 
 public class InteractionManager : NetworkBehaviour
 {
@@ -9,8 +9,14 @@ public class InteractionManager : NetworkBehaviour
     [SerializeField] InputActionAsset inputActions;
     [SerializeField] Camera playerCam;
     [SerializeField] GameObject crosshair;
+    [SerializeField] GameObject progressBar;
 
     RaycastHit hit;
+    public float timer;
+    private const float barMax = .2f;
+    RectTransform progressBarTransform;
+    PlayerInputActions playerInputActions;
+
 
     [SerializeField] InteractableObject currentInteractable;
 
@@ -18,8 +24,13 @@ public class InteractionManager : NetworkBehaviour
     {
         if (!isLocalPlayer)
             return;
+        progressBarTransform = progressBar.GetComponent<RectTransform>();
 
-        inputActions.FindActionMap("Player").FindAction("Interact").performed += CmdCallInteraction;
+        playerInputActions = new PlayerInputActions();
+        playerInputActions.Player.Enable();
+
+        //inputActions.FindActionMap("Player").FindAction("Interact").performed += CmdCallInteraction;
+        progressBar.SetActive(false);
     }
     void FixedUpdate()
     {
@@ -57,6 +68,9 @@ public class InteractionManager : NetworkBehaviour
             DisableCurrnetInteraction();
             crosshair.SetActive(false);
         }
+
+        InteractionDelay();
+
     }
 
     private void SetNewInteractable(InteractableObject newInteractable)
@@ -72,8 +86,35 @@ public class InteractionManager : NetworkBehaviour
         }
     }
 
+    private void InteractionDelay()
+    {
+        if (!currentInteractable)
+        {
+            return;
+        }
+
+        if(playerInputActions.Player.Interact.ReadValue<float>() == 1f)
+        {
+            progressBar.SetActive(true);
+            progressBarTransform.localScale = new Vector3(timer * .1f, 2f, .2f);
+            timer += Time.deltaTime;
+            if(timer >= .5f)
+            {
+                CmdCallInteraction();
+                progressBarTransform.sizeDelta = new Vector3(0f, 2f, .2f);
+                timer = 0f;
+            }
+        }
+        else
+        {
+            progressBar.SetActive(false);
+            progressBarTransform.sizeDelta = new Vector3(0f, 2f, .2f);
+            timer = 0f;
+        }
+    }
+
     [Command]
-    private void CmdCallInteraction(InputAction.CallbackContext context)
+    private void CmdCallInteraction()
     {
         if (!isServer)
         {
@@ -94,7 +135,9 @@ public class InteractionManager : NetworkBehaviour
 
     private void OnDestroy()
     {
-        inputActions.FindActionMap("Player").FindAction("Interact").performed -= CmdCallInteraction;
+        //inputActions.FindActionMap("Player").FindAction("Interact").performed -= CmdCallInteraction;
+
+        playerInputActions.Player.Disable();
 
     }
 }

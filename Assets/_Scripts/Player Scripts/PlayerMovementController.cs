@@ -192,10 +192,6 @@ public class PlayerMovementController : NetworkBehaviour
         {
             playerVelocity.y = 0f;
         }
-
-        Debug.Log(previousVector);
-
-        
     }
 
     private void Jump()
