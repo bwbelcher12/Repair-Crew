@@ -1,6 +1,7 @@
 using Mirror;
 using UnityEngine;
 using UnityEngine.InputSystem;
+using System.Collections.Generic;
 
 public class PlayerMovementController : NetworkBehaviour
 {
@@ -48,6 +49,8 @@ public class PlayerMovementController : NetworkBehaviour
 
     private Vector2 forceVector;
     private Vector2 previousVector;
+    public List<Vector2> last10Vectors = new List<Vector2>();
+    public Vector2 rollingAverage;
     
     private bool hitDetect;
     private Collider hitCollider;
@@ -129,15 +132,20 @@ public class PlayerMovementController : NetworkBehaviour
 
         if (inputForce.y == 0 && inputForce.x == 0)
         {
-            forceVector = previousVector * breakingForce;
-            previousVector = forceVector;
+            foreach(Vector2 vector in last10Vectors)
+            {
+                rollingAverage += vector;
+            }
+
+            rollingAverage /= last10Vectors.Count;
 
             if (Mathf.Abs(previousVector.x) <= .0005f && Mathf.Abs(previousVector.y) <= .0005f)
             {
-                previousVector = Vector2.zero;
+                rollingAverage = Vector2.zero;
+                last10Vectors.Clear();
             }
-
-            controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
+            previousVector = Vector2.zero;
+            controller.Move(new Vector3(rollingAverage.x, 0f, rollingAverage.y));
         }
         else
         {
@@ -159,26 +167,33 @@ public class PlayerMovementController : NetworkBehaviour
         }
         if (inputForce.x > 0)
         {
-            forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 90);
+            forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 90f);
             previousVector += forceVector;
 
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
         if (inputForce.x < 0)
         {
-            forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 270);
+            forceVector = CalcuateForceVector(playerSpeed * Mathf.Abs(inputForce.x) * Time.deltaTime, playerRotation.eulerAngles.y + 270f);
             previousVector += forceVector;
 
             controller.Move(new Vector3(forceVector.x, 0f, forceVector.y));
         }
         controller.Move(new Vector3(0f, playerVelocity.y * Time.deltaTime, 0f));
+
+        last10Vectors.Add(previousVector);
+        if(last10Vectors.Count > 10)
+        {
+            last10Vectors.RemoveAt(0);
+        }
+
         groundedPlayer = IsGrounded();
         if (playerVelocity.y < 0 && groundedPlayer)
         {
             playerVelocity.y = 0f;
         }
 
-        Debug.Log(forceVector);
+        Debug.Log(previousVector);
 
         
     }

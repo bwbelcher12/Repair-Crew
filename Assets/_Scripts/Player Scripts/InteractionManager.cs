@@ -2,6 +2,7 @@ using UnityEngine;
 using Mirror;
 using UnityEngine.InputSystem;
 
+
 public class InteractionManager : NetworkBehaviour
 {
     [SerializeField] float playerReach = 2f;
