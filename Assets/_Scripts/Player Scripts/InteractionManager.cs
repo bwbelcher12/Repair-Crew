@@ -8,6 +8,7 @@ public class InteractionManager : NetworkBehaviour
     [SerializeField] float playerReach = 2f;
     [SerializeField] InputActionAsset inputActions;
     [SerializeField] Camera playerCam;
+    [SerializeField] GameObject crosshair;
 
     RaycastHit hit;
 
@@ -19,7 +20,6 @@ public class InteractionManager : NetworkBehaviour
             return;
 
         inputActions.FindActionMap("Player").FindAction("Interact").performed += CmdCallInteraction;
-
     }
     void FixedUpdate()
     {
@@ -38,20 +38,24 @@ public class InteractionManager : NetworkBehaviour
                 if (newInteractabel.enabled)
                 {
                     SetNewInteractable(newInteractabel);
+                    crosshair.SetActive(true);
                 }
                 else //Looking at a disabled interactable object
                 {
                     DisableCurrnetInteraction();
+                    crosshair.SetActive(false);
                 }
             }
             else //Not looking at an interactable object
             {
                 DisableCurrnetInteraction();
+                crosshair.SetActive(false);
             }
         }
         else //Nothing in range
         {
             DisableCurrnetInteraction();
+            crosshair.SetActive(false);
         }
     }
 
