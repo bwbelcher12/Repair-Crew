@@ -34,6 +34,10 @@ public class InteractionManager : NetworkBehaviour
     }
     void FixedUpdate()
     {
+        if (!isLocalPlayer)
+        {
+            return;
+        }
         CheckInteraction();
     }
 
@@ -88,8 +92,12 @@ public class InteractionManager : NetworkBehaviour
 
     private void InteractionDelay()
     {
+        
         if (!currentInteractable)
         {
+            progressBar.SetActive(false);
+            progressBarTransform.sizeDelta = new Vector3(0f, 2f, .2f);
+            timer = 0f;
             return;
         }
 
@@ -135,6 +143,8 @@ public class InteractionManager : NetworkBehaviour
 
     private void OnDestroy()
     {
+        if (!isLocalPlayer)
+            return;
         //inputActions.FindActionMap("Player").FindAction("Interact").performed -= CmdCallInteraction;
 
         playerInputActions.Player.Disable();
