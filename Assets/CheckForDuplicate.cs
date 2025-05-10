@@ -3,21 +3,15 @@ using UnityEngine;
 public class CheckForDuplicate : MonoBehaviour
 {
     // Start is called once before the first execution of Update after the MonoBehaviour is created
-    void Start()
+    void Awake()
     {
-        Object[] objects = FindObjectsByType(typeof(GameObject), FindObjectsSortMode.None);
+        Object[] objects = FindObjectsByType(typeof(GameObject), FindObjectsSortMode.InstanceID);
         foreach(GameObject obj in objects)
         {
             if(obj.transform.name == transform.name && obj.transform != transform)
             {
-                GameObject.Destroy(gameObject);
+                GameObject.Destroy(this.gameObject);
             }
         }
-    }
-
-    // Update is called once per frame
-    void Update()
-    {
-        
     }
 }

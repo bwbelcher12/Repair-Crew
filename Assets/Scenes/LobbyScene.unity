@@ -1011,7 +1011,6 @@ MonoBehaviour:
   onInteraction:
     m_PersistentCalls:
       m_Calls: []
-  buttonCollider: {fileID: 0}
 --- !u!114 &1262342210
 MonoBehaviour:
   m_ObjectHideFlags: 0
@@ -1042,7 +1041,6 @@ MonoBehaviour:
           m_StringArgument: 
           m_BoolArgument: 0
         m_CallState: 2
-  buttonCollider: {fileID: 0}
 --- !u!1 &1607021782
 GameObject:
   m_ObjectHideFlags: 0
